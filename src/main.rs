@@ -116,23 +116,17 @@ fn main() -> Result<(),Box<dyn Error>>{
     let screen=Screen::new();
         //PROGRAM RUNNING
     loop {
-        if event::poll(Duration::from_secs(AUTOSAVEEVERYMINUTES * 60)).expect("Error") {
-
-
         // DISPLAY TEXT (from on_screen.contents) HERE
         screen.refresh_screen(&on_screen);
 
         // Append test
-        on_screen.insert_content_here(0, String::from("more text"));
-        let worked : bool = FileIO::overwrite_to_file(&opened_file.unwrap(), &on_screen.contents).unwrap();
-        if worked {
-            println!("Write successful");
-        } else {
-            println!("Problem writing to the file");
-        }
-        } else {
-            FileIO::auto_save(&opened_file, &key_handler.updates, &on_screen.contents);
-        }
+        // on_screen.insert_content_here(0, String::from("more text"));
+        // let worked : bool = FileIO::overwrite_to_file(&opened_file.unwrap(), &on_screen.contents).unwrap();
+        // if worked {
+        //     println!("Write successful");
+        // } else {
+        //     println!("Problem writing to the file");
+        // }
         break
 
         //render to user save question
