@@ -119,13 +119,18 @@ fn main() -> Result<(),Box<dyn Error>>{
         // DISPLAY TEXT (from on_screen.contents) HERE
         screen.refresh_screen(&on_screen);
 
-        // Append test
+        // // Append test
         // on_screen.insert_content_here(0, String::from("more text"));
-        // let worked : bool = FileIO::overwrite_to_file(&opened_file.unwrap(), &on_screen.contents).unwrap();
-        // if worked {
-        //     println!("Write successful");
-        // } else {
-        //     println!("Problem writing to the file");
+        // match &opened_file {
+        //     Some(_f) => {
+        //         let worked : bool = FileIO::overwrite_to_file(&opened_file.unwrap(), &on_screen.contents).unwrap();
+        //         if worked {
+        //             println!("Write successful");
+        //         } else {
+        //             println!("Problem writing to the file");
+        //         }
+        //     },
+        //     None => println!("No file selected, working off empty file"),
         // }
         break
 
