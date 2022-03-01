@@ -1,6 +1,7 @@
 use std::io::{Read, stdout, Write, ErrorKind};
 use std::fs::{File, OpenOptions};
 use std::{cmp, env, fs, io};
+use std::error::Error;
 
 use crossterm::{event, terminal, execute, cursor, queue};
 use crossterm::event::{Event, KeyCode, KeyEvent};
@@ -60,7 +61,7 @@ fn main() -> crossterm::Result<()> {
 } */
 
 
-fn main() {
+fn main() -> Result<(),Box<dyn Error>>{
         // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = Tidy_Up;
@@ -112,13 +113,14 @@ fn main() {
     
     crossterm::terminal::enable_raw_mode();
 
+    let screen=Screen::new();
         //PROGRAM RUNNING
     loop {
         if event::poll(Duration::from_secs(AUTOSAVEEVERYMINUTES * 60)).expect("Error") {
 
 
         // DISPLAY TEXT (from on_screen.contents) HERE
-
+        screen.refresh_screen(&on_screen);
 
         // Append test
         on_screen.insert_content_here(0, String::from("more text"));
@@ -135,6 +137,7 @@ fn main() {
 
         //render to user save question
     }
+    Ok(())
         // EXIT
 }
 
@@ -165,7 +168,7 @@ impl FileIO {
                 other_error => {
                     panic!("Problem opening the file: {:?}", other_error)
                 }
-            },
+            }
         } 
     }
 
@@ -364,6 +367,42 @@ impl Display {
         self.contents = result;
     }
 }
+
+/*
+Screen show the content to the screen
+*/
+struct Screen{
+    screen_size: (usize, usize),
+}
+
+impl Screen {
+    fn new() -> Self {
+        let screen_size = terminal::size()
+            .map(|(x, y)| (x as usize, y as usize))
+            .unwrap(); 
+        println!("create screen");
+        Self { screen_size }
+    }
+
+    fn clear_screen() -> crossterm::Result<()> {
+        execute!(stdout(), terminal::Clear(ClearType::All))?;
+        execute!(stdout(), cursor::MoveTo(0, 0))
+    }
+
+    fn draw_content(&self,on_screen: &Display) {
+        let screen_rows = self.screen_size.1;
+        
+        println!("text should be herer");
+    }
+
+    fn refresh_screen(&self,on_screen: &Display) -> crossterm::Result<()> {
+        Self::clear_screen()?;
+        self.draw_content(on_screen);
+        execute!(stdout(), cursor::MoveTo(0, 0))
+    }
+}
+
+
 
 /*
     Struct for disabling raw mode on program exit (when instance is dropped)
