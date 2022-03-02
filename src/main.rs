@@ -6,6 +6,7 @@ use std::error::Error;
 use crossterm::{event, terminal, execute, cursor, queue};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use crossterm::terminal::ClearType;
+use crossterm::style::Print;
 use std::time::Duration; // for autosave
 
 //use device_query::{DeviceQuery, DeviceState, Keycode};
@@ -63,8 +64,8 @@ fn main() -> crossterm::Result<()> {
 } */
 
 
-fn main() -> Result<(),Box<dyn Error>>{
-        // SETUP
+fn main() -> crossterm::Result<()>{
+    // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = Tidy_Up;
     
@@ -111,7 +112,7 @@ fn main() -> Result<(),Box<dyn Error>>{
 
     let key_handler : KeyHandler = KeyHandler::new((100, 100));
 
-    println!("read:\n{}", on_screen.contents);
+    // println!("read:\n{}", on_screen.contents);
     
     crossterm::terminal::enable_raw_mode();
 
@@ -119,7 +120,18 @@ fn main() -> Result<(),Box<dyn Error>>{
         //PROGRAM RUNNING
     loop {
         // DISPLAY TEXT (from on_screen.contents) HERE
-        screen.refresh_screen(&on_screen);
+        screen.refresh_screen(&on_screen)?;
+        if let Event::Key(event) = event::read()?{
+            match event {
+                KeyEvent {
+                    code: KeyCode::Char('b'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                } => break,
+                _ => {
+                    //todo
+                }
+            }
+        }
 
         // // Append test
         // on_screen.insert_content_here(0, String::from("more text"));
@@ -134,7 +146,7 @@ fn main() -> Result<(),Box<dyn Error>>{
         //     },
         //     None => println!("No file selected, working off empty file"),
         // }
-        break
+        // break
 
         //render to user save question
     }
@@ -374,6 +386,7 @@ Screen show the content to the screen
 */
 struct Screen{
     screen_size: (usize, usize),
+    keyHandler:KeyHandler,
 }
 
 impl Screen {
@@ -381,8 +394,11 @@ impl Screen {
         let screen_size = terminal::size()
             .map(|(x, y)| (x as usize, y as usize))
             .unwrap(); 
-        println!("create screen");
-        Self { screen_size }
+        // println!("create screen");
+        Self { 
+            screen_size,
+            keyHandler:KeyHandler::new(screen_size),
+         }
     }
 
     fn clear_screen() -> crossterm::Result<()> {
@@ -391,15 +407,28 @@ impl Screen {
     }
 
     fn draw_content(&self,on_screen: &Display) {
-        let screen_rows = self.screen_size.1;
-        
-        println!("text should be here");
+        // let screen_rows = self.screen_size.1;
+        let mut temp = String::from("");
+        for a in on_screen.contents.chars(){
+            if a=='\n'{
+                temp.push_str("\r\n");
+            }
+            else{
+                temp.push(a);
+            }
+        }
+        queue!(stdout(),Print(temp)).unwrap();
+        // println!("text should be here"); 
     }
 
     fn refresh_screen(&self,on_screen: &Display) -> crossterm::Result<()> {
-        Self::clear_screen()?;
+        let mut stdout=stdout();
+        queue!(stdout, cursor::Hide, terminal::Clear(ClearType::All), cursor::MoveTo(0, 0))?; 
         self.draw_content(on_screen);
-        execute!(stdout(), cursor::MoveTo(0, 0))
+        let ip_x = self.keyHandler.ip_x;
+        let ip_y = self.keyHandler.ip_y;
+        queue!(stdout, cursor::MoveTo(ip_x as u16,ip_y as u16 ),cursor::Show)?;
+        stdout.flush()
     }
 }
 
@@ -412,85 +441,83 @@ struct Tidy_Up;
 impl Drop for Tidy_Up {
     fn drop(&mut self) {
         terminal::disable_raw_mode().expect("Unable to disable raw mode terminal");
-
+        Screen::clear_screen().expect("Error");
     }
 }
 
 
 
-/*
-    define the initial position of cursor
-*/
-struct Output{
-    size: (usize,usize),
-    index:CursorController,
-}
+// /*
+//     define the initial position of cursor
+// */
+// struct Output{
+//     size: (usize,usize),
+//     index:CursorController,
+// }
 
-impl Output{
-    fn new() -> Self {
-        let size = terminal::size().map(|(x, y)| (x as usize, y as usize))
-        .unwrap();
-        Self{
-           size,
-           index:CursorController::new(),
-        }
-    }
+// impl Output{
+//     fn new() -> Self {
+//         let size = terminal::size().map(|(x, y)| (x as usize, y as usize))
+//         .unwrap();
+//         Self{
+//            size,
+//            index:CursorController::new(),
+//         }
+//     }
     
-        /* the initial position of cursor*/
-    fn clear_screen() -> crossterm::Result<()> {
-        execute!(stdout(), terminal::Clear(ClearType::All))?;
-        execute!(stdout(), cursor::MoveTo(0,0))
-    }        
+//         /* the initial position of cursor*/
+//     fn clear_screen() -> crossterm::Result<()> {
+//         execute!(stdout(), terminal::Clear(ClearType::All))?;
+//         execute!(stdout(), cursor::MoveTo(0,0))
+//     }        
 
-    fn refresh_screen(&mut self) -> crossterm::Result<()> { 
-        let mut index_x = self.index.index_x as u16;
-        let mut index_y = self.index.index_y as u16;
-        queue!(self.size, cursor::Hide, terminal::Clear(ClearType::All))?; 
-        //refreash command
-        queue!(self.size, cursor::MoveTo(index_x,index_y), cursor::Show)
-    }
+//     fn refresh_screen(&mut self) -> crossterm::Result<()> { 
+//         let mut index_x = self.index.index_x as u16;
+//         let mut index_y = self.index.index_y as u16;
+//         queue!(self.size, cursor::Hide, terminal::Clear(ClearType::All))?; 
+//         //refreash command
+//         queue!(self.size, cursor::MoveTo(index_x,index_y), cursor::Show)
+//     }
 
-    fn move_cursor(&mut self,direction:char) {
-        self.index.move_(direction);
-    }
-}
-/*
-    struct for cursor controll
-*/
-struct CursorController {
-    index_x: usize,
-    index_y: usize,
-}
+//     fn move_cursor(&mut self,direction:char) {
+//         self.index.move_(direction);
+//     }
+// }
+// /*
+//     struct for cursor controll
+// */
+// struct CursorController {
+//     index_x: usize,
+//     index_y: usize,
+// }
 
 
-impl CursorController {
-    fn new() -> Self {
-        Self {
-            index_x: 0,
-            index_y: 0,
+// impl CursorController {
+//     fn new() -> Self {
+//         Self {
+//             index_x: 0,
+//             index_y: 0,
           
-        }
-    }
-    fn move_(&self, position:char){
-        match position {
-            'w' => {
-                self.index_y -= 1;
-            }
-            'a' => {
-                self.index_x -= 1;
-            }
-            's' => {
-                self.index_y += 1;
-            }
-            'd' => {
-                self.index_x += 1;
-            }
-            _ => (),
-        }
+//         }
+//     }
+//     fn move_(&self, position:char){
+//         match position {
+//             'w' => {
+//                 self.index_y -= 1;
+//             }
+//             'a' => {
+//                 self.index_x -= 1;
+//             }
+//             's' => {
+//                 self.index_y += 1;
+//             }
+//             'd' => {
+//                 self.index_x += 1;
+//             }
+//             _ => (),
+//         }
 
-    }
+//     }
     
-    
-    
-}   
+// }   
 
