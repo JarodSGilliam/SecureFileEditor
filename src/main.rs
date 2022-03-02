@@ -1,4 +1,4 @@
-use std::io::{Read, stdout, Write, ErrorKind};
+use std::io::{Read, stdout, Write, ErrorKind,Cursor};
 use std::fs::{File, OpenOptions};
 use std::{cmp, env, fs, io};
 use std::error::Error;
@@ -7,6 +7,8 @@ use crossterm::{event, terminal, execute, cursor, queue};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use crossterm::terminal::ClearType;
 use std::time::Duration; // for autosave
+
+//use device_query::{DeviceQuery, DeviceState, Keycode};
 
 static MINAUTOSAVESIZE : usize = 100;
 static AUTOSAVEEVERYMINUTES : u64 = 1;
@@ -391,7 +393,7 @@ impl Screen {
     fn draw_content(&self,on_screen: &Display) {
         let screen_rows = self.screen_size.1;
         
-        println!("text should be herer");
+        println!("text should be here");
     }
 
     fn refresh_screen(&self,on_screen: &Display) -> crossterm::Result<()> {
@@ -413,3 +415,82 @@ impl Drop for Tidy_Up {
 
     }
 }
+
+
+
+/*
+    define the initial position of cursor
+*/
+struct Output{
+    size: (usize,usize),
+    index:CursorController,
+}
+
+impl Output{
+    fn new() -> Self {
+        let size = terminal::size().map(|(x, y)| (x as usize, y as usize))
+        .unwrap();
+        Self{
+           size,
+           index:CursorController::new(),
+        }
+    }
+    
+        /* the initial position of cursor*/
+    fn clear_screen() -> crossterm::Result<()> {
+        execute!(stdout(), terminal::Clear(ClearType::All))?;
+        execute!(stdout(), cursor::MoveTo(0,0))
+    }        
+
+    fn refresh_screen(&mut self) -> crossterm::Result<()> { 
+        let mut index_x = self.index.index_x as u16;
+        let mut index_y = self.index.index_y as u16;
+        queue!(self.size, cursor::Hide, terminal::Clear(ClearType::All))?; 
+        //refreash command
+        queue!(self.size, cursor::MoveTo(index_x,index_y), cursor::Show)
+    }
+
+    fn move_cursor(&mut self,direction:char) {
+        self.index.move_(direction);
+    }
+}
+/*
+    struct for cursor controll
+*/
+struct CursorController {
+    index_x: usize,
+    index_y: usize,
+}
+
+
+impl CursorController {
+    fn new() -> Self {
+        Self {
+            index_x: 0,
+            index_y: 0,
+          
+        }
+    }
+    fn move_(&self, position:char){
+        match position {
+            'w' => {
+                self.index_y -= 1;
+            }
+            'a' => {
+                self.index_x -= 1;
+            }
+            's' => {
+                self.index_y += 1;
+            }
+            'd' => {
+                self.index_x += 1;
+            }
+            _ => (),
+        }
+
+    }
+    
+    
+    
+}   
+
