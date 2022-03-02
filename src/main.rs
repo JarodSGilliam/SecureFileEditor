@@ -396,11 +396,21 @@ impl Screen {
         println!("text should be here");
     }
 
-    fn refresh_screen(&self,on_screen: &Display) -> crossterm::Result<()> {
+    fn refresh_screen(&self,on_screen: &Display,&KeyHandler) -> crossterm::Result<()> {
         Self::clear_screen()?;
+        queue!(self.size, cursor::Hide, terminal::Clear(ClearType::All))?; 
+        //refreash command
         self.draw_content(on_screen);
-        execute!(stdout(), cursor::MoveTo(0, 0))
+        let mut index_x = &KeyHandler.ip_x as u16;
+        let mut index_y = &KeyHandler.ip_y as u16; //cursor
+        queue!(self.size, cursor::MoveTo(index_x,index_y), cursor::Show)
     }
+
+
+    fn move_cursor(&mut self,direction:char) {
+        self.index.move_(direction);
+    }
+}
 }
 
 
@@ -418,79 +428,7 @@ impl Drop for Tidy_Up {
 
 
 
-/*
-    define the initial position of cursor
-*/
-struct Output{
-    size: (usize,usize),
-    index:CursorController,
+
 }
-
-impl Output{
-    fn new() -> Self {
-        let size = terminal::size().map(|(x, y)| (x as usize, y as usize))
-        .unwrap();
-        Self{
-           size,
-           index:CursorController::new(),
-        }
-    }
-    
-        /* the initial position of cursor*/
-    fn clear_screen() -> crossterm::Result<()> {
-        execute!(stdout(), terminal::Clear(ClearType::All))?;
-        execute!(stdout(), cursor::MoveTo(0,0))
-    }        
-
-    fn refresh_screen(&mut self) -> crossterm::Result<()> { 
-        let mut index_x = self.index.index_x as u16;
-        let mut index_y = self.index.index_y as u16;
-        queue!(self.size, cursor::Hide, terminal::Clear(ClearType::All))?; 
-        //refreash command
-        queue!(self.size, cursor::MoveTo(index_x,index_y), cursor::Show)
-    }
-
-    fn move_cursor(&mut self,direction:char) {
-        self.index.move_(direction);
-    }
-}
-/*
-    struct for cursor controll
-*/
-struct CursorController {
-    index_x: usize,
-    index_y: usize,
-}
-
-
-impl CursorController {
-    fn new() -> Self {
-        Self {
-            index_x: 0,
-            index_y: 0,
-          
-        }
-    }
-    fn move_(&self, position:char){
-        match position {
-            'w' => {
-                self.index_y -= 1;
-            }
-            'a' => {
-                self.index_x -= 1;
-            }
-            's' => {
-                self.index_y += 1;
-            }
-            'd' => {
-                self.index_x += 1;
-            }
-            _ => (),
-        }
-
-    }
-    
-    
-    
-}   
+ 
 
