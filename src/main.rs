@@ -127,20 +127,35 @@ fn main() -> crossterm::Result<()>{
                     code: KeyCode::Char('b'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => break,
+
                 KeyEvent{
                     code: direction,
                     modifiers:event::KeyModifiers::NONE,
 
-                } => {match direction{ KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right =>
-                    screen.key_Handler.move_ip(direction),
-                    _ => ()
-                }
+                } => {
+                    match direction{ 
+                        KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End | KeyCode::Enter =>
+                        screen.key_Handler.move_ip(direction),
+                        _ => ()
                     }
+                },
+
+                // KeyEvent{
+                //     code: roll,
+                //     modifiers:event::KeyModifiers::NONE,
+
+                // } => {
+                //     match roll{
+                //         KeyCode::PageDown | KeyCode::PageUp => screen.key_Handler.move_ip(roll),
+                //         _ => ()
+                //     }
+                // },
                 _ => {
                     //todo
                 }
             }
         }
+        
 
         // // Append test
         // on_screen.insert_content_here(0, String::from("more text"));
@@ -322,14 +337,28 @@ impl KeyHandler {
             KeyCode::Left => {
                 if self.ip_x != 0 {
                     self.ip_x -= 1;
+                } else {
+                    self.ip_x=0;
                 }
             },
             KeyCode::Right => {
                 if self.ip_x != self.screen_cols - 1 {
                     self.ip_x += 1;
+                } else{
+                    self.ip_x = self.screen_cols;
                 }
             },
-            _ => {}
+            KeyCode::End => self.ip_x = self.screen_cols -1,
+            KeyCode::Home => { 
+                self.ip_x = 0;
+                self.ip_y = 0;
+            },
+            KeyCode::Enter => {
+                self.ip_x = 0;
+                self.ip_y += 1;
+            },
+          
+            _ => {} //more code needed
         }
     }
 
