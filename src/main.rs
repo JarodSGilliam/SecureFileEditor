@@ -67,7 +67,7 @@ fn main() -> crossterm::Result<()> {
 fn main() -> crossterm::Result<()>{
     // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
-    let _tidy_up = Tidy_Up;
+    let _tidy_up = TidyUp;
     
     // If the user is working on a saved file, it will hold the path to the target file
     // If the user is working on an unsaved file, it will hold None
@@ -116,7 +116,7 @@ fn main() -> crossterm::Result<()>{
     
     crossterm::terminal::enable_raw_mode();
 
-    let screen=Screen::new();
+    let mut screen=Screen::new();
         //PROGRAM RUNNING
     loop {
         // DISPLAY TEXT (from on_screen.contents) HERE
@@ -127,6 +127,15 @@ fn main() -> crossterm::Result<()>{
                     code: KeyCode::Char('b'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => break,
+                KeyEvent{
+                    code: direction,
+                    modifiers:event::KeyModifiers::NONE,
+
+                } => {match direction{ KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right =>
+                    screen.key_Handler.move_ip(direction),
+                    _ => ()
+                }
+                    }
                 _ => {
                     //todo
                 }
@@ -152,6 +161,9 @@ fn main() -> crossterm::Result<()>{
     }
     Ok(())
         // EXIT
+    
+
+    
 }
 
 
@@ -386,7 +398,7 @@ Screen show the content to the screen
 */
 struct Screen{
     screen_size: (usize, usize),
-    keyHandler:KeyHandler,
+    key_Handler:KeyHandler,
 }
 
 impl Screen {
@@ -397,7 +409,7 @@ impl Screen {
         // println!("create screen");
         Self { 
             screen_size,
-            keyHandler:KeyHandler::new(screen_size),
+            key_Handler:KeyHandler::new(screen_size),
          }
     }
 
@@ -425,11 +437,17 @@ impl Screen {
         let mut stdout=stdout();
         queue!(stdout, cursor::Hide, terminal::Clear(ClearType::All), cursor::MoveTo(0, 0))?; 
         self.draw_content(on_screen);
-        let ip_x = self.keyHandler.ip_x;
-        let ip_y = self.keyHandler.ip_y;
+        let ip_x = self.key_Handler.ip_x;
+        let ip_y = self.key_Handler.ip_y;
         queue!(stdout, cursor::MoveTo(ip_x as u16,ip_y as u16 ),cursor::Show)?;
         stdout.flush()
     }
+
+    fn move_cursor(&mut self,operation:KeyCode) {
+        self.key_Handler.move_ip(operation);
+    }
+
+
 }
 
 
@@ -437,8 +455,8 @@ impl Screen {
 /*
     Struct for disabling raw mode on program exit (when instance is dropped)
 */
-struct Tidy_Up;
-impl Drop for Tidy_Up {
+struct TidyUp;
+impl Drop for TidyUp {
     fn drop(&mut self) {
         terminal::disable_raw_mode().expect("Unable to disable raw mode terminal");
         Screen::clear_screen().expect("Error");
@@ -447,77 +465,6 @@ impl Drop for Tidy_Up {
 
 
 
-// /*
-//     define the initial position of cursor
-// */
-// struct Output{
-//     size: (usize,usize),
-//     index:CursorController,
-// }
-
-// impl Output{
-//     fn new() -> Self {
-//         let size = terminal::size().map(|(x, y)| (x as usize, y as usize))
-//         .unwrap();
-//         Self{
-//            size,
-//            index:CursorController::new(),
-//         }
-//     }
-    
-//         /* the initial position of cursor*/
-//     fn clear_screen() -> crossterm::Result<()> {
-//         execute!(stdout(), terminal::Clear(ClearType::All))?;
-//         execute!(stdout(), cursor::MoveTo(0,0))
-//     }        
-
-//     fn refresh_screen(&mut self) -> crossterm::Result<()> { 
-//         let mut index_x = self.index.index_x as u16;
-//         let mut index_y = self.index.index_y as u16;
-//         queue!(self.size, cursor::Hide, terminal::Clear(ClearType::All))?; 
-//         //refreash command
-//         queue!(self.size, cursor::MoveTo(index_x,index_y), cursor::Show)
-//     }
-
-//     fn move_cursor(&mut self,direction:char) {
-//         self.index.move_(direction);
-//     }
-// }
-// /*
-//     struct for cursor controll
-// */
-// struct CursorController {
-//     index_x: usize,
-//     index_y: usize,
-// }
 
 
-// impl CursorController {
-//     fn new() -> Self {
-//         Self {
-//             index_x: 0,
-//             index_y: 0,
-          
-//         }
-//     }
-//     fn move_(&self, position:char){
-//         match position {
-//             'w' => {
-//                 self.index_y -= 1;
-//             }
-//             'a' => {
-//                 self.index_x -= 1;
-//             }
-//             's' => {
-//                 self.index_y += 1;
-//             }
-//             'd' => {
-//                 self.index_x += 1;
-//             }
-//             _ => (),
-//         }
-
-//     }
-    
-// }   
 
