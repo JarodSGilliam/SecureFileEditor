@@ -1,4 +1,4 @@
-use std::io::{Read, stdout, Write, ErrorKind,Cursor};
+use std::io::{Read, stdout, Write, ErrorKind,Cursor, BufRead};
 use std::fs::{File, OpenOptions};
 use std::{cmp, env, fs, io};
 use std::error::Error;
@@ -279,7 +279,8 @@ struct KeyHandler {
     ip_y: usize,
     screen_cols: usize,
     screen_rows: usize,
-    updates: usize,
+    rows: Vec<usize>,
+    columns: usize,
 }
 impl KeyHandler {
     //create new KeyHandler with insertion point at origin (top-left corner)
@@ -289,7 +290,8 @@ impl KeyHandler {
             ip_y: 0,
             screen_cols: window_size.0,
             screen_rows: window_size.1,
-            updates: 111,
+            rows: Vec::new(),
+            columns: 0,
         }
     }
 
@@ -301,42 +303,64 @@ impl KeyHandler {
                     self.ip_y = 0;
                 } else {
                     self.ip_y -= 1;
+                    let new_max_x = self.rows.get(self.ip_y).unwrap();
+                    if new_max_x <= &self.ip_x {
+                        self.ip_x = *new_max_x - 1;
+                    }
                 }
             },
             KeyCode::Down => {
-                if self.ip_y != self.screen_rows - 1 {
-                    self.ip_y += 1;
+                if self.ip_y < self.columns - 1 {
+                    if self.ip_y != self.screen_rows - 1 {
+                        self.ip_y += 1;
+                        let new_max_x = self.rows.get(self.ip_y).unwrap();
+                        if new_max_x <= &self.ip_x {
+                            self.ip_x = *new_max_x - 1;
+                        }
+                    }
                 }
             },
             KeyCode::Left => {
                 if self.ip_x != 0 {
                     self.ip_x -= 1;
                 } else {
-                    self.ip_x=0;
+                    if self.ip_y > 0 {
+                        self.ip_x=self.rows.get(self.ip_y-1).unwrap()-1;
+                    }
+                    KeyHandler::move_ip(self, KeyCode::Up);
                 }
             },
             KeyCode::Right => {
-                if self.ip_x != self.screen_cols - 1 {
-                    self.ip_x += 1;
-                } else{
-                    self.ip_x = self.screen_cols;
+                // println!("{} {}", self.size_of_row, self.ip_x);
+                let thisRow = match self.rows.get(self.ip_y) {
+                    Some(i) => i,
+                    None => panic!("error"),
+                };
+                if self.ip_x < thisRow - 1 {
+                    if self.ip_x != self.screen_cols - 1 {
+                        self.ip_x += 1;
+                    } else{
+                        self.ip_x = self.screen_cols;
+                    }
+                } else if self.ip_y != self.columns - 1{
+                    self.ip_x = 0;
+                    KeyHandler::move_ip(self, KeyCode::Down);
                 }
             },
-            KeyCode::End => self.ip_x = self.screen_cols -1,
+            KeyCode::End => self.ip_x = self.rows[self.ip_y] -1,
             KeyCode::Home => { 
                 self.ip_x = 0;
-                self.ip_y = 0;
+                // self.ip_y = 0;
             },
             _ => {} //more code needed
         }
     }
 
-    fn insertion(&mut self, operation : KeyCode,on_screen: &mut Display) {
+    fn insertion(&mut self, operation : KeyCode, on_screen: &mut Display) {
         match operation {
             KeyCode::Char(c) => {
                 on_screen.contents.insert(self.get_current_location_in_string(on_screen), c);
                 on_screen.num_char_in_row[self.ip_y]+=1;
-                self.updates += 1;
                 self.ip_x += 1;
                 println!("{:?}",on_screen.num_char_in_row);
                 println!("bleh: {}\r", c);
@@ -344,7 +368,6 @@ impl KeyHandler {
             // KeyCode::Tab => {
             //     on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\t');
             //     on_screen.num_char_in_row[self.ip_y]+=1;
-            //     self.updates += 1;
             //     self.ip_x += 1;
             // },
             KeyCode::Backspace => {
@@ -353,11 +376,17 @@ impl KeyHandler {
                         //do nothing since insertion point is at origin (top-left)
                     }
                     else {
-                        on_screen.contents.remove(self.get_current_location_in_string(on_screen)-1);
+                        let deleted : char = on_screen.contents.remove(self.get_current_location_in_string(on_screen)-1);
+                        if deleted == '\n' {
+                            on_screen.contents.remove(self.get_current_location_in_string(on_screen)-2);
+                        }
                         self.ip_x=on_screen.num_char_in_row[self.ip_y-1]-1;
                         on_screen.num_char_in_row[self.ip_y-1]+=on_screen.num_char_in_row[self.ip_y]-1;
                         on_screen.num_char_in_row.remove(self.ip_y);
                         self.ip_y-=1;
+                        // if deleted == '\n' {
+                        //     self.ip_y-=1;
+                        // }
                     }
                 }
                 else{
@@ -365,7 +394,6 @@ impl KeyHandler {
                     on_screen.num_char_in_row[self.ip_y]-=1;
                     self.ip_x -= 1;
                 }
-                self.updates += 1;
                 println!("bleh: back\r");
             },
 
@@ -386,14 +414,12 @@ impl KeyHandler {
                      on_screen.num_char_in_row[self.ip_y] -= 1;
                      self.ip_x += 1;
                  }
-                 self.updates += 1;
             },
 
             KeyCode::Enter => {
                 on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\n');
                 on_screen.num_char_in_row.insert(self.ip_y+1,on_screen.num_char_in_row[self.ip_y]-self.ip_x);
                 on_screen.num_char_in_row[self.ip_y]=self.ip_x+1;
-                self.updates += 1;
                 self.ip_x = 0;
                 self.ip_y += 1;
             },
@@ -474,7 +500,6 @@ struct Screen{
     // screen_size: (usize, usize),
     key_handler: KeyHandler,
 }
-
 impl Screen {
     fn new() -> Self {
         let screen_size = terminal::size()
@@ -491,14 +516,22 @@ impl Screen {
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
 
-    fn draw_content(&self,on_screen: &Display) {
+    fn draw_content(&mut self,on_screen: &Display) {
         // let screen_rows = self.screen_size.1;
-        let mut temp = on_screen.contents.replace('\n', "\r\n");
+        let mut temp = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
+        let temp2 = on_screen.contents.clone() + &"a";
+        let calculator : Vec<&str> = temp2.split("\n").collect();
+        self.key_handler.columns = calculator.len();
+        let mut rows : Vec<usize> = Vec::new();
+        for i in calculator {
+            rows.push(i.len());
+        }
+        self.key_handler.rows = rows;
         queue!(stdout(),Print(temp)).unwrap();
         // println!("text should be here"); 
     }
 
-    fn refresh_screen(&self,on_screen: &Display) -> crossterm::Result<()> {
+    fn refresh_screen(&mut self,on_screen: &Display) -> crossterm::Result<()> {
         let mut stdout=stdout();
         queue!(stdout, cursor::Hide, terminal::Clear(ClearType::All), cursor::MoveTo(0, 0))?; 
         self.draw_content(on_screen);
