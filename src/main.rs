@@ -4,15 +4,15 @@ use std::{cmp, env, fs, io};
 use std::error::Error;
 
 use crossterm::{event, terminal, execute, cursor, queue};
-use crossterm::event::{Event, KeyCode, KeyEvent};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::ClearType;
 use crossterm::style::Print;
-use std::time::Duration; // for autosave
 
 //use device_query::{DeviceQuery, DeviceState, Keycode};
 
-static MINAUTOSAVESIZE : usize = 100;
-static AUTOSAVEEVERYMINUTES : u64 = 1;
+// Configurations
+static AUTOSAVE : bool = false;
+static AUTOSAVEEVERYNOPERATIONS : usize = 1000;
 
 /*//UP-TO: part 2
 // Part 3 will introduce more input handling as well as 
@@ -64,27 +64,27 @@ fn main() -> crossterm::Result<()> {
 } */
 
 
-fn main() -> crossterm::Result<()>{
+fn main() {
     // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = TidyUp;
     
-    let mut file_path_out=String::new();
-    
     // If the user is working on a saved file, it will hold the path to the target file
     // If the user is working on an unsaved file, it will hold None
-    let opened_file : Option<String> = {
+    let opened_file_path : Option<String> = {
         let args: Vec<String> = env::args().collect();
         if args.len() >= 2 {
-            file_path_out=args[1].clone();
             let file_path = &args[1];
             match FileIO::get_file(file_path) {
                 Some(_f) => {
+                    // If the user uses the autosave, it replaces the current save with the auto save
+                    // If the user does not use the autosave, it simply ignores the autosave
                     if FileIO::check_for_auto_save(file_path) {
                         println!("Use autosave?");
-                        // If the user uses the autosave, it replaces the current save with the auto save
-                        // If the user does not use the autosave, it simply ignores the autosave
-                        if true {
+                        let mut line = String::new();
+                        std::io::stdin().read_line(&mut line).unwrap();
+                        println!("{}", line.trim());
+                        if line.trim().eq("y") || line.trim().eq("yes") {
                             FileIO::overwrite_to_file(file_path, &FileIO::read_from_file(&FileIO::get_auto_save_path(file_path)).unwrap()).unwrap();
                             FileIO::delete_auto_save(file_path);
                         }
@@ -99,7 +99,7 @@ fn main() -> crossterm::Result<()>{
     };
 
     let mut on_screen : Display = Display::new();
-    match &opened_file {
+    match &opened_file_path {
         Some(f) => {
             let test = FileIO::read_from_file(&f);
             match test {
@@ -117,15 +117,24 @@ fn main() -> crossterm::Result<()>{
 
     // println!("read:\n{}", on_screen.contents);
     
-    crossterm::terminal::enable_raw_mode()?;
-    println!("{}",on_screen.contents.len());
+    
+    match crossterm::terminal::enable_raw_mode() {
+        Ok(_a) => {},
+        Err(e) => eprint!("{}", e),
+    };
+    // println!("{}",on_screen.contents.len());
     
     let mut screen=Screen::new();
+    let mut operations : usize = 0;
+
         //PROGRAM RUNNING
     loop {
         // DISPLAY TEXT (from on_screen.contents) HERE
-        screen.refresh_screen(&on_screen)?;
-        if let Event::Key(event) = event::read()?{
+        match screen.refresh_screen(&on_screen) {
+            Ok(_) => {},
+            Err(e) => eprint!("{}", e),
+        };
+        if let Event::Key(event) = event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
             match event {
                 KeyEvent {
                     code: KeyCode::Char('w'),
@@ -135,7 +144,10 @@ fn main() -> crossterm::Result<()>{
                     code: KeyCode::Char('s'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    FileIO::overwrite_to_file(&file_path_out, &on_screen.contents)?;
+                    match FileIO::overwrite_to_file(&opened_file_path.unwrap_or(String::from("default.txt")), &on_screen.contents) {
+                        Ok(_) => {},
+                        Err(e) => eprint!("Failed to save because of error {}", e),
+                    };
                     break
                 },
                 KeyEvent{
@@ -181,13 +193,20 @@ fn main() -> crossterm::Result<()>{
         // }
         // break
 
+        
+        // Autosave system so the user does not lose a lot of progress
+        if operations <= AUTOSAVEEVERYNOPERATIONS {
+            operations += 1;
+        } else {
+            operations = 0;
+            if AUTOSAVE {
+                FileIO::auto_save(&opened_file_path, &on_screen.contents);
+            }
+        }
+
         //render to user save question
     }
-    Ok(())
         // EXIT
-    
-
-    
 }
 
 
@@ -239,11 +258,7 @@ impl FileIO {
         FileIO::append_to_file(pathname, new_text)
     }
 
-    fn auto_save(pathname : &Option<String>, updates_count : &usize, current_state_of_text : &String) {
-        if *updates_count < MINAUTOSAVESIZE {
-            println!("Not enough content to autosave.");
-            return;
-        }
+    fn auto_save(pathname : &Option<String>, current_state_of_text : &String) {
         println!("Autosaving...");
         let pathname : String = {
             match pathname {
