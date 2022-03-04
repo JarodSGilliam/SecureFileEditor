@@ -157,7 +157,7 @@ fn main() {
                 } =>screen.key_handler.move_ip(direction),
 
                 KeyEvent{
-                    code:input@(KeyCode::Char(..) | /* KeyCode::Tab | */ KeyCode::Enter | KeyCode::Backspace),
+                    code:input@(KeyCode::Char(..) | /* KeyCode::Tab | */ KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete),
                     modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
                 }=>screen.key_handler.insertion(input,&mut on_screen),
                 
@@ -400,9 +400,9 @@ impl KeyHandler {
             KeyCode::Backspace => {
                 if self.ip_x==0{
                     if self.ip_y==0{
-                        //do nothing
+                        //do nothing since insertion point is at origin (top-left)
                     }
-                    else{
+                    else {
                         on_screen.contents.remove(self.get_current_location_in_string(on_screen)-1);
                         self.ip_x=on_screen.num_char_in_row[self.ip_y-1]-1;
                         on_screen.num_char_in_row[self.ip_y-1]+=on_screen.num_char_in_row[self.ip_y]-1;
@@ -417,11 +417,28 @@ impl KeyHandler {
                 }
                 self.updates += 1;
                 println!("bleh: back\r");
-            }
-            // KeyCode::Delete => {
-            //     self.updates += 1;
-            //     println!("bleh: delete");
-            // }
+            },
+
+            KeyCode::Delete => {
+                 if self.ip_x == self.screen_cols {
+                    if self.ip_y == self.screen_rows {
+                        //do nothing since insertion point is at end of file (bottom-right)
+                    } else {
+                        println!("{}", self.get_current_location_in_string(on_screen));
+                        on_screen.contents.remove(self.get_current_location_in_string(on_screen) + 1);
+                        self.ip_x = on_screen.num_char_in_row[self.ip_y] - 1;
+                        on_screen.num_char_in_row[self.ip_y - 1] += on_screen.num_char_in_row[self.ip_y] - 1;
+                        on_screen.num_char_in_row.remove(self.ip_y);
+                        self.ip_y -= 1;
+                    }
+                 } else {
+                     on_screen.contents.remove(self.get_current_location_in_string(on_screen) + 1);
+                     on_screen.num_char_in_row[self.ip_y] -= 1;
+                     self.ip_x += 1;
+                 }
+                 self.updates += 1;
+            },
+
             KeyCode::Enter => {
                 on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\n');
                 on_screen.num_char_in_row.insert(self.ip_y+1,on_screen.num_char_in_row[self.ip_y]-self.ip_x);
