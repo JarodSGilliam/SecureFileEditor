@@ -111,6 +111,7 @@ fn main() {
                     modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
                 }=>screen.key_handler.insertion(input,&mut on_screen),
                 
+                // This part is to implement the function of keyboard interacting with the text file.
                 // KeyEvent{
                 //     code: roll,
                 //     modifiers:event::KeyModifiers::NONE,
@@ -274,6 +275,7 @@ impl FileIO {
     Struct responsible for moving the user's (i)nsertion (p)oint while
     the program is running.
 */
+// ip_x, ip_y indicates the index of cursor and use the screen_cols and rows to store the screen size
 struct KeyHandler {
     ip_x: usize,
     ip_y: usize,
@@ -345,7 +347,7 @@ impl KeyHandler {
                 } else if self.ip_y != self.columns - 1{
                     self.ip_x = 0;
                     KeyHandler::move_ip(self, KeyCode::Down);
-                }
+                } // else is for default, the limit is set to be the screen size for further adjustment
             },
             KeyCode::End => self.ip_x = self.rows[self.ip_y] -1,
             KeyCode::Home => { 
@@ -493,6 +495,7 @@ impl Display {
 /*
 Screen show the content to the screen
 */
+// fix the cursor in some special cases
 struct Screen{
     // screen_size: (usize, usize),
     key_handler: KeyHandler,
