@@ -110,12 +110,13 @@ fn main() -> crossterm::Result<()>{
         None => on_screen.set_contents(String::new())
     }
 
-    let key_handler : KeyHandler = KeyHandler::new((100, 100));
+    // let key_handler : KeyHandler = KeyHandler::new((100, 100));
 
     // println!("read:\n{}", on_screen.contents);
     
-    crossterm::terminal::enable_raw_mode();
-
+    crossterm::terminal::enable_raw_mode()?;
+    println!("{}",on_screen.contents.len());
+    
     let mut screen=Screen::new();
         //PROGRAM RUNNING
     loop {
@@ -124,22 +125,21 @@ fn main() -> crossterm::Result<()>{
         if let Event::Key(event) = event::read()?{
             match event {
                 KeyEvent {
-                    code: KeyCode::Char('b'),
+                    code: KeyCode::Char('w'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => break,
 
                 KeyEvent{
-                    code: direction,
+                    code: direction@(KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End),
                     modifiers:event::KeyModifiers::NONE,
 
-                } => {
-                    match direction{ 
-                        KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End | KeyCode::Enter =>
-                        screen.key_Handler.move_ip(direction),
-                        _ => ()
-                    }
-                },
+                } =>screen.key_handler.move_ip(direction),
 
+                KeyEvent{
+                    code:input@(KeyCode::Char(..) | /* KeyCode::Tab | */ KeyCode::Enter | KeyCode::Backspace),
+                    modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
+                }=>screen.key_handler.insertion(input,&mut on_screen),
+                
                 // KeyEvent{
                 //     code: roll,
                 //     modifiers:event::KeyModifiers::NONE,
@@ -353,39 +353,73 @@ impl KeyHandler {
                 self.ip_x = 0;
                 self.ip_y = 0;
             },
-            KeyCode::Enter => {
-                self.ip_x = 0;
-                self.ip_y += 1;
-            },
-          
             _ => {} //more code needed
         }
     }
 
-    fn insertion(&mut self, operation : KeyCode) {
+    fn insertion(&mut self, operation : KeyCode,on_screen: &mut Display) {
         match operation {
             KeyCode::Char(c) => {
+                on_screen.contents.insert(self.get_current_location_in_string(on_screen), c);
+                on_screen.num_char_in_row[self.ip_y]+=1;
                 self.updates += 1;
                 self.ip_x += 1;
-                println!("bleh: {}", c);
+                println!("{:?}",on_screen.num_char_in_row);
+                println!("bleh: {}\r", c);
             },
+            // KeyCode::Tab => {
+            //     on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\t');
+            //     on_screen.num_char_in_row[self.ip_y]+=1;
+            //     self.updates += 1;
+            //     self.ip_x += 1;
+            // },
             KeyCode::Backspace => {
+                if self.ip_x==0{
+                    if self.ip_y==0{
+                        //do nothing
+                    }
+                    else{
+                        on_screen.contents.remove(self.get_current_location_in_string(on_screen)-1);
+                        self.ip_x=on_screen.num_char_in_row[self.ip_y-1]-1;
+                        on_screen.num_char_in_row[self.ip_y-1]+=on_screen.num_char_in_row[self.ip_y]-1;
+                        on_screen.num_char_in_row.remove(self.ip_y);
+                        self.ip_y-=1;
+                    }
+                }
+                else{
+                    on_screen.contents.remove(self.get_current_location_in_string(on_screen)-1);
+                    on_screen.num_char_in_row[self.ip_y]-=1;
+                    self.ip_x -= 1;
+                }
                 self.updates += 1;
-                self.ip_x -= 1;
-                println!("bleh: back");
+                println!("bleh: back\r");
             }
-            KeyCode::Delete => {
+            // KeyCode::Delete => {
+            //     self.updates += 1;
+            //     println!("bleh: delete");
+            // }
+            KeyCode::Enter => {
+                on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\n');
+                on_screen.num_char_in_row.insert(self.ip_y+1,on_screen.num_char_in_row[self.ip_y]-self.ip_x);
+                on_screen.num_char_in_row[self.ip_y]=self.ip_x+1;
                 self.updates += 1;
-                println!("bleh: delete");
-            }
+                self.ip_x = 0;
+                self.ip_y += 1;
+            },
             _ => {}
         }
     }
 
     //Backspace and moving forward when typing
 
-    fn get_current_location_in_string(&mut self) -> usize {
-        let x = self.ip_y*self.screen_cols + self.ip_x; //Does not deal with screen having been scrolled?
+    fn get_current_location_in_string(&mut self,on_screen: &Display) -> usize {
+        // let x = self.ip_y*self.screen_cols + self.ip_x; //wrong
+        let mut x=0;
+        for i in 0..self.ip_y{
+            x+=on_screen.num_char_in_row[i];
+        }
+        x+=self.ip_x;
+        println!("{}",x);
         x
     }
 }
@@ -395,30 +429,50 @@ impl KeyHandler {
 */
 struct Display {
     contents : String,
+    num_char_in_row: Vec<usize>,
 }
 impl Display {
     fn new() -> Display {
         Display {
             contents: String::new(),
+            num_char_in_row:vec![],
         }
     }
     
     fn set_contents(&mut self, new_contents : String) {
         self.contents = new_contents;
+        if self.contents.len()==0{
+            self.num_char_in_row.push(0);
+        }
+        else{
+            let mut num=0;
+            for i in self.contents.chars(){
+                num+=1;
+                if i=='\n'{
+                    self.num_char_in_row.push(num);
+                    num=0;
+                }
+            }
+            if num !=0{
+                self.num_char_in_row.push(num);
+            }
+        }
+        println!("{:?}",self.num_char_in_row);
     }
     
-    fn insert_content_here(&mut self, before_here : usize, new_contents : String) {
-        let mut result = String::from("");
-        for a in self.contents[..before_here].chars() {
-            result.push(a);
-        }
-        for a in new_contents.chars() {
-            result.push(a);
-        }
-        for a in self.contents[before_here..].chars() {
-            result.push(a);
-        }
-        self.contents = result;
+    fn insert_content_here(&mut self, before_here : usize, new_string : String) {
+        // let mut result = String::from("");
+        // for a in self.contents[..before_here].chars() {
+        //     result.push(a);
+        // }
+        // for a in new_string.chars() {
+        //     result.push(a);
+        // }
+        // for a in self.contents[before_here..].chars() {
+        //     result.push(a);
+        // }
+        // let x=&self.contents[..before_here];
+        self.contents = format!("{}{}{}",&self.contents[..before_here],new_string,&self.contents[before_here..]);
     }
 }
 
@@ -426,8 +480,8 @@ impl Display {
 Screen show the content to the screen
 */
 struct Screen{
-    screen_size: (usize, usize),
-    key_Handler:KeyHandler,
+    // screen_size: (usize, usize),
+    key_handler: KeyHandler,
 }
 
 impl Screen {
@@ -435,10 +489,9 @@ impl Screen {
         let screen_size = terminal::size()
             .map(|(x, y)| (x as usize, y as usize))
             .unwrap(); 
-        // println!("create screen");
         Self { 
-            screen_size,
-            key_Handler:KeyHandler::new(screen_size),
+            // screen_size,
+            key_handler:KeyHandler::new(screen_size),
          }
     }
 
@@ -449,15 +502,7 @@ impl Screen {
 
     fn draw_content(&self,on_screen: &Display) {
         // let screen_rows = self.screen_size.1;
-        let mut temp = String::from("");
-        for a in on_screen.contents.chars(){
-            if a=='\n'{
-                temp.push_str("\r\n");
-            }
-            else{
-                temp.push(a);
-            }
-        }
+        let mut temp = on_screen.contents.replace('\n', "\r\n");
         queue!(stdout(),Print(temp)).unwrap();
         // println!("text should be here"); 
     }
@@ -466,17 +511,15 @@ impl Screen {
         let mut stdout=stdout();
         queue!(stdout, cursor::Hide, terminal::Clear(ClearType::All), cursor::MoveTo(0, 0))?; 
         self.draw_content(on_screen);
-        let ip_x = self.key_Handler.ip_x;
-        let ip_y = self.key_Handler.ip_y;
+        let ip_x = self.key_handler.ip_x;
+        let ip_y = self.key_handler.ip_y;
         queue!(stdout, cursor::MoveTo(ip_x as u16,ip_y as u16 ),cursor::Show)?;
         stdout.flush()
     }
 
     fn move_cursor(&mut self,operation:KeyCode) {
-        self.key_Handler.move_ip(operation);
+        self.key_handler.move_ip(operation);
     }
-
-
 }
 
 
