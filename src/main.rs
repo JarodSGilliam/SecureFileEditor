@@ -377,9 +377,6 @@ impl KeyHandler {
                     }
                     else {
                         let deleted : char = on_screen.contents.remove(self.get_current_location_in_string(on_screen)-1);
-                        if deleted == '\n' {
-                            on_screen.contents.remove(self.get_current_location_in_string(on_screen)-2);
-                        }
                         self.ip_x=on_screen.num_char_in_row[self.ip_y-1]-1;
                         on_screen.num_char_in_row[self.ip_y-1]+=on_screen.num_char_in_row[self.ip_y]-1;
                         on_screen.num_char_in_row.remove(self.ip_y);
@@ -519,12 +516,12 @@ impl Screen {
     fn draw_content(&mut self,on_screen: &Display) {
         // let screen_rows = self.screen_size.1;
         let mut temp = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
-        let temp2 = on_screen.contents.clone() + &"a";
+        let temp2 = on_screen.contents.clone();
         let calculator : Vec<&str> = temp2.split("\n").collect();
         self.key_handler.columns = calculator.len();
         let mut rows : Vec<usize> = Vec::new();
         for i in calculator {
-            rows.push(i.len());
+            rows.push(i.len() + 1);
         }
         self.key_handler.rows = rows;
         queue!(stdout(),Print(temp)).unwrap();
