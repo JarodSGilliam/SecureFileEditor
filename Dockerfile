@@ -13,6 +13,6 @@ COPY src ./src
 COPY Cargo.toml .
 COPY Cargo.lock .
 
-RUN cargo build
+RUN cargo run text.txt
 
 CMD ["/bin/bash"]

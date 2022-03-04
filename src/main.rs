@@ -69,11 +69,14 @@ fn main() -> crossterm::Result<()>{
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = TidyUp;
     
+    let mut file_path_out=String::new();
+    
     // If the user is working on a saved file, it will hold the path to the target file
     // If the user is working on an unsaved file, it will hold None
     let opened_file : Option<String> = {
         let args: Vec<String> = env::args().collect();
         if args.len() >= 2 {
+            file_path_out=args[1].clone();
             let file_path = &args[1];
             match FileIO::get_file(file_path) {
                 Some(_f) => {
@@ -128,7 +131,13 @@ fn main() -> crossterm::Result<()>{
                     code: KeyCode::Char('w'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => break,
-
+                KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                } => {
+                    FileIO::overwrite_to_file(&file_path_out, &on_screen.contents)?;
+                    break
+                },
                 KeyEvent{
                     code: direction@(KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End),
                     modifiers:event::KeyModifiers::NONE,
