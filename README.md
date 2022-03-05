@@ -15,6 +15,12 @@ With Docker installed:
 5) when presented with the bash shell, use "cd src"
 6) "cargo run test.txt" [other file names if applicable]
 
+# Usage instructions
+Once the application is open, you can edit the file using your keyboard.
+To save your changes and close the file, use Ctrl + s.
+To exit, use Ctrl + w.
+
+
 ## V1
 (Set to release 3/4/2022)
 For the first release, the team plans to focus on the base functionality of the editor, such as opening, saving, and creating a new file. These features are facets of any file editor and so we feel it is important to focus on them first and foremost.
