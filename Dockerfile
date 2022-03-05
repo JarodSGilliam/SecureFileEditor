@@ -17,7 +17,7 @@ COPY text.txt .
 # RUN cd src
 RUN cargo build
 # RUN cargo run test.txt
-RUN cargo run text.txt
+# RUN cargo run text.txt
 
 
 CMD ["/bin/bash"]
