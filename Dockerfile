@@ -12,10 +12,12 @@ RUN curl https://getmic.ro | sh -s -- -y && mv micro /usr/bin/
 COPY src ./src
 COPY Cargo.toml .
 COPY Cargo.lock .
+COPY text.txt .
 
-RUN cd src
+# RUN cd src
 RUN cargo build
-#RUN cargo run test.txt
+# RUN cargo run test.txt
+RUN cargo run text.txt
 
 
 CMD ["/bin/bash"]
