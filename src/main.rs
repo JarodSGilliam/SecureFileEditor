@@ -101,7 +101,7 @@ fn main() {
                 } =>screen.key_handler.move_ip(direction),
 
                 KeyEvent{
-                    code:input@(KeyCode::Char(..) | /* KeyCode::Tab | */ KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete),
+                    code:input@(KeyCode::Char(..) | KeyCode::Tab | KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete),
                     modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
                 }=>screen.key_handler.insertion(input,&mut on_screen),
                 
@@ -342,6 +342,12 @@ impl KeyHandler {
                 println!("{:?}",self.rows);
                 println!("bleh: {}\r", c);
             },
+
+            KeyCode::Tab => {
+                on_screen.contents.insert_str(self.get_current_location_in_string(), "    ");
+                self.rows[self.ip_y] += 1;
+                self.ip_x += 4;
+            }
             // KeyCode::Tab => {
             //     on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\t');
             //     self.rows[self.ip_y]+=1;
