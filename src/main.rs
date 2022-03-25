@@ -1,12 +1,14 @@
 use std::io::{Read, stdout, Write, ErrorKind,Cursor, BufRead};
 use std::fs::{File, OpenOptions};
-use std::{cmp, env, fs, io};
+use std::{cmp, env, fs, io, thread, time};
 use std::error::Error;
 
 use crossterm::{event, terminal, execute, cursor, queue, style};
+use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::ClearType;
 use crossterm::style::Print;
+use crossterm::Result as CResult;
 
 //use device_query::{DeviceQuery, DeviceState, Keycode};
 
@@ -102,7 +104,7 @@ fn main() {
                 } =>screen.key_handler.move_ip(direction),
 
                 KeyEvent{
-                    code:input@(KeyCode::Char(..) | KeyCode::Tab | KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete),
+                    code:input@(KeyCode::Char(..) | KeyCode::Tab | KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete | KeyCode::Esc),
                     modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
                 }=>screen.key_handler.insertion(input,&mut on_screen),
                 
@@ -345,10 +347,16 @@ impl KeyHandler {
             },
 
             KeyCode::Tab => {
+                println!("tabbing");
                 on_screen.contents.insert_str(self.get_current_location_in_string(), "    ");
                 self.rows[self.ip_y] += 4;
                 self.ip_x += 4;
-            }
+            },
+            KeyCode::Esc => {
+                test_alt_screen();
+
+
+            },
             // KeyCode::Tab => {
             //     on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\t');
             //     self.rows[self.ip_y]+=1;
@@ -424,6 +432,9 @@ impl KeyHandler {
 
 struct InfoBar {
     contents: String,
+}
+impl InfoBar {
+    
 }
 
 /*
@@ -525,4 +536,13 @@ impl Drop for TidyUp {
         terminal::disable_raw_mode().expect("Unable to disable raw mode terminal");
         Screen::clear_screen().expect("Error");
     }
+}
+
+//this funciton is meant to test out the AlternateScreen feature
+//you can access this by presing 'Esc' during execution
+fn test_alt_screen() -> CResult<()> {
+    execute!(stdout(), EnterAlternateScreen)?;
+    queue!(stdout(), Print("alt screen".to_string()));
+    thread::sleep(time::Duration::from_millis(1000));
+    execute!(stdout(), LeaveAlternateScreen)
 }
