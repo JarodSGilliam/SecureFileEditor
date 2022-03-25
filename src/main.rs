@@ -3,7 +3,7 @@ use std::fs::{File, OpenOptions};
 use std::{cmp, env, fs, io};
 use std::error::Error;
 
-use crossterm::{event, terminal, execute, cursor, queue};
+use crossterm::{event, terminal, execute, cursor, queue, style};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::terminal::ClearType;
 use crossterm::style::Print;
@@ -94,6 +94,7 @@ fn main() {
                     };
                     break
                 },
+
                 KeyEvent{
                     code: direction@(KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End),
                     modifiers:event::KeyModifiers::NONE,
@@ -345,7 +346,7 @@ impl KeyHandler {
 
             KeyCode::Tab => {
                 on_screen.contents.insert_str(self.get_current_location_in_string(), "    ");
-                self.rows[self.ip_y] += 1;
+                self.rows[self.ip_y] += 4;
                 self.ip_x += 4;
             }
             // KeyCode::Tab => {
@@ -418,6 +419,14 @@ impl KeyHandler {
 }
 
 /*
+    Struct for information bar at bottom of editor window
+*/
+
+struct InfoBar {
+    contents: String,
+}
+
+/*
     Struct for displaying file contents to user
 */
 struct Display {
@@ -438,6 +447,12 @@ impl Display {
     fn insert_content_here(&mut self, before_here : usize, new_string : String) {
         self.contents = format!("{}{}{}",&self.contents[..before_here],new_string,&self.contents[before_here..]);
     }
+
+    /*
+    fn draw_info_bar(&mut self) {
+        self.contents.push_str(&style::Attribute::Reverse.to_string());
+    }
+    */
 }
 
 /*
@@ -476,6 +491,13 @@ impl Screen {
         queue!(stdout(),Print(temp)).unwrap();
         // println!("text should be here"); 
     }
+
+    /*
+    fn draw_info_bar(&mut self, on_screen: &Display) {
+        on_screen.contents.push_str(&style::Attribute::Reverse.to_string());
+        (0..key_handler.)
+    }
+    */
 
     fn refresh_screen(&mut self,on_screen: &Display) -> crossterm::Result<()> {
         let mut stdout=stdout();
