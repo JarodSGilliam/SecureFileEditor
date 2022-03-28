@@ -342,12 +342,12 @@ impl KeyHandler {
                 on_screen.contents.insert(self.get_current_location_in_string(), c);
                 self.rows[self.ip_y]+=1;
                 self.ip_x += 1;
-                println!("{:?}",self.rows);
-                println!("bleh: {}\r", c);
+                //println!("{:?}",self.rows);
+                //println!("bleh: {}\r", c);
             },
 
             KeyCode::Tab => {
-                println!("tabbing");
+                //println!("tabbing");
                 on_screen.contents.insert_str(self.get_current_location_in_string(), "    ");
                 self.rows[self.ip_y] += 4;
                 self.ip_x += 4;
@@ -380,7 +380,7 @@ impl KeyHandler {
                     self.rows[self.ip_y]-=1;
                     self.ip_x -= 1;
                 }
-                println!("bleh: back\r");
+                //println!("bleh: back\r");
             },
 
             KeyCode::Delete => {
@@ -389,7 +389,7 @@ impl KeyHandler {
                         //do nothing since insertion point is at end of file (bottom-right)
                     } 
                     else {
-                        println!("{}", self.get_current_location_in_string());
+                        //println!("{}", self.get_current_location_in_string());
                         on_screen.contents.remove(self.get_current_location_in_string());
                         self.rows[self.ip_y] += self.rows[self.ip_y+1] - 1;
                         self.rows.remove(self.ip_y+1);
@@ -421,7 +421,7 @@ impl KeyHandler {
             x+=self.rows[i];
         }
         x+=self.ip_x;
-        println!("{}",x);
+        //println!("{}",x);
         x
     }
 }
@@ -539,10 +539,23 @@ impl Drop for TidyUp {
 }
 
 //this funciton is meant to test out the AlternateScreen feature
-//you can access this by presing 'Esc' during execution
+//you can access this by pressing 'Esc' during execution
+//the idea here is to allow the user to enter their find/replace text here,
+// then move back to the main screen to 'find' it
 fn test_alt_screen() -> CResult<()> {
-    execute!(stdout(), EnterAlternateScreen)?;
-    queue!(stdout(), Print("alt screen".to_string()));
-    thread::sleep(time::Duration::from_millis(1000));
-    execute!(stdout(), LeaveAlternateScreen)
+    execute!(stdout(), EnterAlternateScreen)?;  //move to alternate screen
+    terminal::enable_raw_mode()?;               //enable raw mode in alternate screen
+    let stdin = io::stdin();
+    let mut handle = stdin.lock();
+    let mut buffer = String::new();
+
+    println!("Text to find: ");
+    handle.read_line(&mut buffer)?;
+    thread::sleep(time::Duration::from_millis(1500));
+
+    /* queue!(stdout(), Print("alt screen".to_string()));
+    let mut s = String::new();
+    io::stdin().read_line(&mut s).expect("failed to read input");
+    thread::sleep(time::Duration::from_millis(1500)); */
+    execute!(stdout(), LeaveAlternateScreen)    //move back to main screen
 }
