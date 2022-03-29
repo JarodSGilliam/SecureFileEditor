@@ -50,63 +50,120 @@ fn main() {
         }
     };
 
-    let mut on_screen : Display = Display::new();
+    // Creates a stack of screens
+    let mut screens_stack : Vec<Display> = Vec::new();
+    
+    // Creates the screen for the file contents
+    let mut file_screen : Display = Display::new();
     match &opened_file_path {
         Some(f) => {
             let test = FileIO::read_from_file(&f);
             match test {
-                Ok(f) => on_screen.set_contents(String::from(f)),
+                Ok(f) => file_screen.set_contents(String::from(f)),
                 Err(e) => {
                     eprintln!("{}", e);
                     panic!("ERROR");
                 }
             }
         },
-        None => on_screen.set_contents(String::new())
+        None => file_screen.set_contents(String::new())
     }
+    screens_stack.push(file_screen);
 
+    // Setup
     match crossterm::terminal::enable_raw_mode() {
         Ok(_a) => {},
         Err(e) => eprint!("{}", e),
     };
     
+    //Creates the screen on which everything is displayed
     let mut screen=Screen::new();
+    
+    // Counts the number of operations that have been executed since the last autosave or file opening
     let mut operations : usize = 0;
 
-        //PROGRAM RUNNING
+    // PROGRAM RUNNING
     loop {
-        // DISPLAY TEXT (from on_screen.contents) HERE
-        match screen.refresh_screen(&on_screen) {
+        // Displays the contents of the top screen
+        match screen.refresh_screen(match screens_stack.last() {
+            Some(t) => t,
+            None => {break},
+        }) {
             Ok(_) => {},
             Err(e) => eprint!("{}", e),
         };
+
+        // Watches for key commands
         if let Event::Key(event) = event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
             match event {
-                KeyEvent {//exit program
+                //exit program
+                KeyEvent {
                     code: KeyCode::Char('w'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => break,
-                KeyEvent {//save file
+                
+                //save file
+                KeyEvent {
                     code: KeyCode::Char('s'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    match FileIO::overwrite_to_file(&opened_file_path.unwrap_or(String::from("default.txt")), &on_screen.contents) {
+                    match FileIO::overwrite_to_file(&opened_file_path.unwrap_or(String::from("default.txt")), match screens_stack.first() {
+                        Some(t) => &t.contents,
+                        None => {break},
+                    }) {
                         Ok(_) => {},
                         Err(e) => eprint!("Failed to save because of error {}", e),
                     };
                     break
                 },
 
+                // Events that move the cursor
                 KeyEvent{
                     code: direction@(KeyCode::Up| KeyCode::Down | KeyCode::Left | KeyCode::Right | KeyCode::Home | KeyCode::End),
                     modifiers:event::KeyModifiers::NONE,
 
                 } =>screen.key_handler.move_ip(direction),
 
+                // Events that change the text
                 KeyEvent{
-                    code:input@(KeyCode::Char(..) | KeyCode::Tab | KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete | KeyCode::Esc),
+                    code:input@(KeyCode::Char(..) | KeyCode::Tab | KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete),
                     modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
-                }=>screen.key_handler.insertion(input,&mut on_screen),
+                }=>screen.key_handler.insertion(input,match screens_stack.last_mut() {
+                    Some(t) => t,
+                    None => {break},
+                }),
+
+                // Triggers find screen
+                KeyEvent {
+                    code: KeyCode::Esc,
+                    modifiers: event::KeyModifiers::NONE,
+                } => {
+                    // Hunter's version
+                    // test_alt_screen();
+                    
+                    // Jarod's Version
+                    if screens_stack.len() == 1 {
+                        match screens_stack.first_mut() {
+                            Some(t) => t.save_active_cursor_location(&screen.key_handler),
+                            None => {break},
+                        }
+                        screen.key_handler.ip_x = 0;
+                        screen.key_handler.ip_y = 0;
+                        let mut find_display : Display = Display::new();
+                        find_display.set_prompt(String::from("Text to find:"));
+                        screens_stack.push(find_display);
+                        
+                    } else {
+                        screens_stack.pop();
+                        let cursor_location = match screens_stack.first_mut() {
+                            Some(t) => t.active_cursor_location,
+                            None => {break},
+                        };
+                        screen.key_handler.ip_x = cursor_location.0;
+                        screen.key_handler.ip_y = cursor_location.1;
+                    }
+                },
+                
                 
                 // This part is to implement the function of keyboard interacting with the text file.
                 // KeyEvent{
@@ -131,7 +188,10 @@ fn main() {
         } else {
             operations = 0;
             if AUTOSAVE {
-                FileIO::auto_save(&opened_file_path, &on_screen.contents);
+                FileIO::auto_save(&opened_file_path, match screens_stack.first() {
+                    Some(t) => &t.contents,
+                    None => {break},
+                });
             }
         }
 
@@ -313,11 +373,11 @@ impl KeyHandler {
                 }
             },
             KeyCode::Right => {
-                let thisRow = match self.rows.get(self.ip_y) {
+                let this_row = match self.rows.get(self.ip_y) {
                     Some(i) => i,
                     None => panic!("error"),
                 };
-                if self.ip_x < thisRow - 1 {
+                if self.ip_x < this_row - 1 {
                     if self.ip_x != self.screen_cols - 1 {
                         self.ip_x += 1;
                     } else{
@@ -351,11 +411,6 @@ impl KeyHandler {
                 on_screen.contents.insert_str(self.get_current_location_in_string(), "    ");
                 self.rows[self.ip_y] += 4;
                 self.ip_x += 4;
-            },
-            KeyCode::Esc => {
-                test_alt_screen();
-
-
             },
             // KeyCode::Tab => {
             //     on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\t');
@@ -427,36 +482,36 @@ impl KeyHandler {
 }
 
 /*
-    Struct for information bar at bottom of editor window
-*/
-
-struct InfoBar {
-    contents: String,
-}
-impl InfoBar {
-    
-}
-
-/*
     Struct for displaying file contents to user
 */
 struct Display {
     contents : String,
+    prompt : String,
+    active_cursor_location : (usize, usize),
 }
 impl Display {
     fn new() -> Display {
         Display {
             contents: String::new(),
+            prompt : String::new(),
+            active_cursor_location : (0, 0),
         }
     }
     
     fn set_contents(&mut self, new_contents : String) {
         self.contents = new_contents;
+    }
 
+    fn set_prompt(&mut self, new_prompt : String) {
+        self.prompt = new_prompt + "\n";
     }
     
     fn insert_content_here(&mut self, before_here : usize, new_string : String) {
         self.contents = format!("{}{}{}",&self.contents[..before_here],new_string,&self.contents[before_here..]);
+    }
+
+    fn save_active_cursor_location(&mut self, keyhandler : &KeyHandler) {
+        self.active_cursor_location = (keyhandler.ip_x, keyhandler.ip_y);
     }
 
     /*
@@ -488,9 +543,9 @@ impl Screen {
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
     //print the char, and get the char of each row, get the total row number
-    fn draw_content(&mut self,on_screen: &Display) {
+    fn draw_content(&mut self, on_screen: &Display) {
         // let screen_rows = self.screen_size.1;
-        let mut temp = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
+        let content = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
         let temp2 = on_screen.contents.clone();
         let calculator : Vec<&str> = temp2.split("\n").collect();
         self.key_handler.columns = calculator.len();
@@ -499,7 +554,8 @@ impl Screen {
             rows.push(i.len() + 1);
         }
         self.key_handler.rows = rows;
-        queue!(stdout(),Print(temp)).unwrap();
+        queue!(stdout(),Print(&on_screen.prompt)).unwrap();
+        queue!(stdout(),Print(content)).unwrap();
         // println!("text should be here"); 
     }
 
@@ -515,12 +571,15 @@ impl Screen {
         queue!(stdout, cursor::Hide, terminal::Clear(ClearType::All), cursor::MoveTo(0, 0))?; 
         self.draw_content(on_screen);
         let ip_x = self.key_handler.ip_x;
-        let ip_y = self.key_handler.ip_y;
+        let mut ip_y = self.key_handler.ip_y;
+        if on_screen.prompt != "" {
+            ip_y += 1;
+        }
         queue!(stdout, cursor::MoveTo(ip_x as u16,ip_y as u16 ),cursor::Show)?;
         stdout.flush()
     }
 
-    fn move_cursor(&mut self,operation:KeyCode) {
+    fn move_cursor(&mut self, operation:KeyCode) {
         self.key_handler.move_ip(operation);
     }
 }
