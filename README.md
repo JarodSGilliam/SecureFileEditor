@@ -17,12 +17,12 @@ With Docker installed:
 ## V1
 (Set to release 3/4/2022)
 For the first release, the team plans to focus on the base functionality of the editor, such as opening, saving, and creating a new file. These features are facets of any file editor and so we feel it is important to focus on them first and foremost.
-* [ ] Open a File
-* [ ] Edit a File
-* [ ] Save File
+* [x] Open a File
+* [x] Edit a File
+* [x] Save File
 
 ## V2
-(Set to release ??/??/2022)
+(Set to release 4/8/2022)
 For the second release, we plan to focus on more advanced features such as the find/find and replace features, as well as various on-screen information such as displaying the name and type of the open file. 
 * [ ] Find
 * [ ] Find and Replace
