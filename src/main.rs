@@ -142,6 +142,8 @@ fn main() {
                     // test_alt_screen();
                     
                     // Jarod's Version
+                    let mut the_text_that_is_being_searched_for = String::new();
+
                     if screens_stack.len() == 1 {
                         match screens_stack.first_mut() {
                             Some(t) => t.save_active_cursor_location(&screen.key_handler),
@@ -171,6 +173,11 @@ fn main() {
                         
                         
                     } else {
+                        the_text_that_is_being_searched_for = match screens_stack.last() {
+                            Some(t) => String::from(t.contents.as_str()),
+                            None => String::new(),
+                        };
+                        print!("\nThe text the user was looking for: {}", the_text_that_is_being_searched_for);
                         screens_stack.pop();
                         let cursor_location = match screens_stack.first_mut() {
                             Some(t) => t.active_cursor_location,
