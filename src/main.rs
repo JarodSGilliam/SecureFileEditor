@@ -152,6 +152,23 @@ fn main() {
                         let mut find_display : Display = Display::new();
                         find_display.set_prompt(String::from("Text to find:"));
                         screens_stack.push(find_display);
+
+                        /*
+                            At this point we want to get the user's input for the text they'd like to find.
+                            Using io::stdin doesn't seem to work, so we may need to use something else here.
+                        */
+
+                        /*if s.len() > 0 {
+                            screens_stack.pop();
+                            let cursor_location = match screens_stack.first_mut() {
+                                Some(t) => t.active_cursor_location,
+                                None => {break},
+                            };
+                            screen.key_handler.ip_x = cursor_location.0;
+                            screen.key_handler.ip_y = cursor_location.1;
+                            }
+                        */
+                        
                         
                     } else {
                         screens_stack.pop();
