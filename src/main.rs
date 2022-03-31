@@ -54,7 +54,7 @@ fn main() {
     let mut screens_stack : Vec<Display> = Vec::new();
     
     // Creates the screen for the file contents
-    let mut file_screen : Display = Display::new();
+    let mut file_screen : Display = Display::new(DisplayType::Text);
     match &opened_file_path {
         Some(f) => {
             let test = FileIO::read_from_file(&f);
@@ -173,16 +173,11 @@ fn main() {
                     // Jarod's Version
 
                     if screens_stack.len() == 1 {
-                        match screens_stack.first_mut() {
-                            Some(t) => t.save_active_cursor_location(&screen.key_handler),
-                            None => {break},
-                        }
-                        screen.key_handler.ip_x = 0;
-                        screen.key_handler.ip_y = 0;
-                        let mut find_display : Display = Display::new();
-                        find_display.set_prompt(String::from("Text to find:"));
-                        screens_stack.push(find_display);
+                        // find_display
+                        create_new_screen(&mut screen, &mut screens_stack);
+                        screens_stack.last_mut().unwrap().set_prompt(String::from("Text to find:"));
 
+                        
                         /*
                             At this point we want to get the user's input for the text they'd like to find.
                             Using io::stdin doesn't seem to work, so we may need to use something else here.
@@ -208,11 +203,6 @@ fn main() {
                     modifiers: event::KeyModifiers::NONE,
                 } => {
                     if screens_stack.len() > 1 {
-                        the_text_that_is_being_searched_for = match screens_stack.last() {
-                            Some(t) => String::from(t.contents.as_str()),
-                            None => String::new(),
-                        };
-                        print!("\nThe text the user was looking for: {}", the_text_that_is_being_searched_for);
                         screens_stack.pop();
                         let cursor_location = match screens_stack.first_mut() {
                             Some(t) => t.active_cursor_location,
@@ -257,6 +247,18 @@ fn main() {
         //render to user save question
     }
         // EXIT
+}
+
+fn create_new_screen(screen : &mut Screen, screens_stack : &mut Vec<Display>) {
+    match screens_stack.first_mut() {
+        Some(t) => t.save_active_cursor_location(&screen.key_handler),
+        None => {return},
+    }
+    screen.key_handler.ip_x = 0;
+    screen.key_handler.ip_y = 0;
+    let mut find_display : Display = Display::new(DisplayType::Find);
+    screens_stack.push(find_display);
+
 }
 
 
@@ -540,17 +542,24 @@ impl KeyHandler {
     }
 }
 
+enum DisplayType {
+    Text,
+    Find,
+}
+
 /*
     Struct for displaying file contents to user
 */
 struct Display {
+    display_type : DisplayType,
     contents : String,
     prompt : String,
     active_cursor_location : (usize, usize),
 }
 impl Display {
-    fn new() -> Display {
+    fn new(display_type : DisplayType) -> Display {
         Display {
+            display_type : display_type,
             contents: String::new(),
             prompt : String::new(),
             active_cursor_location : (0, 0),
