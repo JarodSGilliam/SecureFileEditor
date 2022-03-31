@@ -116,32 +116,40 @@ fn main() {
                     code: KeyCode::Char('s'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    match FileIO::overwrite_to_file(&opened_file_path.unwrap_or(String::from("default.txt")), match screens_stack.first() {
+                    let pathname : String = String::from(match &opened_file_path {
+                        Some(t) => t.as_str(),
+                        None => "",
+                    });
+                    let new_text : &String = match screens_stack.first() {
                         Some(t) => &t.contents,
                         None => {break},
-                    }) {
+                    };
+                    match FileIO::overwrite_to_file(&pathname, new_text) {
                         Ok(_) => {},
                         Err(e) => eprint!("Failed to save because of error {}", e),
                     };
-                    break
+                    // break
                 },
 
-                // KeyEvent {
-                //     code: KeyCode::Char('s'),
-                //     modifiers: event::KeyModifiers::CONTROL,
-                // } => {
-                //     let temp = &opened_file_path.unwrap_or(String::from("default.txt"));
-                //     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
-                //     screens_stack.last_mut().unwrap().set_contents(String::from(FileIO::print_metadata(FileIO::get_file(temp).unwrap())));
-                //     match screen.refresh_screen(match screens_stack.last() {
-                //         Some(t) => t,
-                //         None => {break},
-                //     }) {
-                //         Ok(_) => {},
-                //         Err(e) => eprint!("{}", e),
-                //     };
-                //     break
-                // },
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                } => {
+                    let pathname : String = String::from(match &opened_file_path {
+                        Some(t) => t.as_str(),
+                        None => "",
+                    });
+                    
+                    Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
+                    screens_stack.last_mut().unwrap().set_contents(String::from(FileIO::print_metadata(FileIO::get_file(&pathname).unwrap())));
+                    match screen.refresh_screen(match screens_stack.last() {
+                        Some(t) => t,
+                        None => {break},
+                    }) {
+                        Ok(_) => {},
+                        Err(e) => eprint!("{}", e),
+                    };
+                },
 
                 // Events that move the cursor
                 KeyEvent{
