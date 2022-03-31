@@ -93,6 +93,8 @@ fn main() {
             Err(e) => eprint!("{}", e),
         };
 
+        let mut the_text_that_is_being_searched_for = String::new();
+        
         // Watches for key commands
         if let Event::Key(event) = event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
             match event {
@@ -126,23 +128,49 @@ fn main() {
 
                 // Events that change the text
                 KeyEvent{
-                    code:input@(KeyCode::Char(..) | KeyCode::Tab | KeyCode::Enter | KeyCode::Backspace | KeyCode::Delete),
+                    code:input@(KeyCode::Char(..) | KeyCode::Tab |  KeyCode::Backspace | KeyCode::Delete),
                     modifiers:event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
                 }=>screen.key_handler.insertion(input,match screens_stack.last_mut() {
                     Some(t) => t,
                     None => {break},
                 }),
 
+                KeyEvent {
+                    code:KeyCode::Enter,
+                    modifiers:event::KeyModifiers::NONE,
+                } => {
+                    if screens_stack.len() == 1 {
+                        screen.key_handler.insertion(KeyCode::Enter, match screens_stack.last_mut() {
+                            Some(t) => t,
+                            None => {break},
+                        })
+                    }
+                    if screens_stack.len() > 1 {
+                        the_text_that_is_being_searched_for = match screens_stack.last() {
+                            Some(t) => String::from(t.contents.as_str()),
+                            None => String::new(),
+                        };
+                        print!("\nThe text the user was looking for: {}", the_text_that_is_being_searched_for);
+                        screens_stack.pop();
+                        let cursor_location = match screens_stack.first_mut() {
+                            Some(t) => t.active_cursor_location,
+                            None => {break},
+                        };
+                        screen.key_handler.ip_x = cursor_location.0;
+                        screen.key_handler.ip_y = cursor_location.1;
+                    }
+                },
+
                 // Triggers find screen
                 KeyEvent {
-                    code: KeyCode::Esc,
-                    modifiers: event::KeyModifiers::NONE,
+                    code: KeyCode::Char('f'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                    
                 } => {
                     // Hunter's version
                     // test_alt_screen();
                     
                     // Jarod's Version
-                    let mut the_text_that_is_being_searched_for = String::new();
 
                     if screens_stack.len() == 1 {
                         match screens_stack.first_mut() {
@@ -172,7 +200,14 @@ fn main() {
                         */
                         
                         
-                    } else {
+                    }
+                },
+
+                KeyEvent {
+                    code: KeyCode::Esc,
+                    modifiers: event::KeyModifiers::NONE,
+                } => {
+                    if screens_stack.len() > 1 {
                         the_text_that_is_being_searched_for = match screens_stack.last() {
                             Some(t) => String::from(t.contents.as_str()),
                             None => String::new(),
@@ -569,7 +604,7 @@ impl Screen {
     //print the char, and get the char of each row, get the total row number
     fn draw_content(&mut self, on_screen: &Display) {
         // let screen_rows = self.screen_size.1;
-        let content = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
+        let mut content = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
         let temp2 = on_screen.contents.clone();
         let calculator : Vec<&str> = temp2.split("\n").collect();
         self.key_handler.columns = calculator.len();
@@ -578,7 +613,8 @@ impl Screen {
             rows.push(i.len() + 1);
         }
         self.key_handler.rows = rows;
-        queue!(stdout(),Print(&on_screen.prompt)).unwrap();
+        // content += format!("{}", content.len()).as_str();
+        queue!(stdout(),Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
         queue!(stdout(),Print(content)).unwrap();
         // println!("text should be here"); 
     }
@@ -597,7 +633,7 @@ impl Screen {
         let ip_x = self.key_handler.ip_x;
         let mut ip_y = self.key_handler.ip_y;
         if on_screen.prompt != "" {
-            ip_y += 1;
+            ip_y += on_screen.prompt.matches("\n").count();
         }
         queue!(stdout, cursor::MoveTo(ip_x as u16,ip_y as u16 ),cursor::Show)?;
         stdout.flush()
