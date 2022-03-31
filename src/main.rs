@@ -84,6 +84,8 @@ fn main() {
 
     let mut the_text_that_is_being_searched_for = String::new();
 
+    let help_text = "Ctrl + h = help page \nCtrl + f = find\nCtrl + w = close file";
+
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
@@ -123,6 +125,23 @@ fn main() {
                     };
                     break
                 },
+
+                // KeyEvent {
+                //     code: KeyCode::Char('s'),
+                //     modifiers: event::KeyModifiers::CONTROL,
+                // } => {
+                //     let temp = &opened_file_path.unwrap_or(String::from("default.txt"));
+                //     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
+                //     screens_stack.last_mut().unwrap().set_contents(String::from(FileIO::print_metadata(FileIO::get_file(temp).unwrap())));
+                //     match screen.refresh_screen(match screens_stack.last() {
+                //         Some(t) => t,
+                //         None => {break},
+                //     }) {
+                //         Ok(_) => {},
+                //         Err(e) => eprint!("{}", e),
+                //     };
+                //     break
+                // },
 
                 // Events that move the cursor
                 KeyEvent{
@@ -167,6 +186,17 @@ fn main() {
                     }
                 },
 
+                KeyEvent {
+                    code:KeyCode::Char('h'),
+                    modifiers:event::KeyModifiers::CONTROL,
+                } => {
+                    if screens_stack.last().unwrap().display_type != DisplayType::Help {
+                        Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
+                        screens_stack.last_mut().unwrap().set_prompt(String::from("Help:"));
+                        screens_stack.last_mut().unwrap().set_contents(String::from(help_text));
+                    }
+                }
+
                 // Triggers find screen
                 KeyEvent {
                     code: KeyCode::Char('f'),
@@ -180,7 +210,7 @@ fn main() {
 
                     if screens_stack.len() == 1 {
                         // find_display
-                        create_new_screen(&mut screen, &mut screens_stack);
+                        Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Find);
                         screens_stack.last_mut().unwrap().set_prompt(String::from("Text to find:"));
 
                         
@@ -216,6 +246,12 @@ fn main() {
                         };
                         screen.key_handler.ip_x = cursor_location.0;
                         screen.key_handler.ip_y = cursor_location.1;
+                    } else {
+                        if screens_stack.last().unwrap().display_type != DisplayType::Help {
+                            Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
+                            screens_stack.last_mut().unwrap().set_prompt(String::from("Help:"));
+                            screens_stack.last_mut().unwrap().set_contents(String::from(help_text));
+                        }
                     }
                 },
                 
@@ -254,19 +290,6 @@ fn main() {
     }
         // EXIT
 }
-
-fn create_new_screen(screen : &mut Screen, screens_stack : &mut Vec<Display>) {
-    match screens_stack.first_mut() {
-        Some(t) => t.save_active_cursor_location(&screen.key_handler),
-        None => {return},
-    }
-    screen.key_handler.ip_x = 0;
-    screen.key_handler.ip_y = 0;
-    let mut find_display : Display = Display::new(DisplayType::Find);
-    screens_stack.push(find_display);
-
-}
-
 
 // Deals with all the reading and writing to the file
 struct FileIO;
@@ -366,15 +389,17 @@ impl FileIO {
         }
     }
 
-    fn print_metadata(file : File) {
-        let debug = true;
+    fn print_metadata(file : File) -> String {
+        // let debug = true;
         let metadata = match file.metadata() {
             Err(e) => panic!("Could not get metadata from file: {}", e),
             Ok(f) => f,
         };
-        if debug {
-            print!("{:#?}", metadata);
-        };
+        // if debug {
+        //     print!("{:#?}", metadata);
+        // };
+        let output : String = format!("Last accessed: {:?}\nCreated: {:?}\nLast Modified: {:?}\nLength: {:?}, Permissions: {:?}", metadata.accessed(), metadata.created(), metadata.modified(), metadata.len(), metadata.permissions());
+        output
     }
 }
 
@@ -548,9 +573,11 @@ impl KeyHandler {
     }
 }
 
+#[derive(PartialEq)]
 enum DisplayType {
     Text,
     Find,
+    Help,
 }
 
 /*
@@ -593,6 +620,17 @@ impl Display {
         self.contents.push_str(&style::Attribute::Reverse.to_string());
     }
     */
+
+    fn new_on_stack(screen : &mut Screen, screens_stack : &mut Vec<Display>, display_type : DisplayType) {
+        match screens_stack.first_mut() {
+            Some(t) => t.save_active_cursor_location(&screen.key_handler),
+            None => {return},
+        }
+        screen.key_handler.ip_x = 0;
+        screen.key_handler.ip_y = 0;
+        screens_stack.push(Display::new(display_type));
+    }
+
 }
 
 /*
