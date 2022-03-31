@@ -10,6 +10,9 @@ use crossterm::terminal::ClearType;
 use crossterm::style::Print;
 use crossterm::Result as CResult;
 
+use chrono::DateTime;
+use chrono::offset::Local;
+
 //use device_query::{DeviceQuery, DeviceState, Keycode};
 
 // Configurations
@@ -116,6 +119,7 @@ fn main() {
                     code: KeyCode::Char('s'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
+                    screens_stack.last_mut().unwrap().set_prompt(String::from("Saved!"));
                     let pathname : String = String::from(match &opened_file_path {
                         Some(t) => t.as_str(),
                         None => "",
@@ -403,10 +407,17 @@ impl FileIO {
             Err(e) => panic!("Could not get metadata from file: {}", e),
             Ok(f) => f,
         };
+        
+        let mut temp : DateTime<Local> = metadata.accessed().unwrap().into();
+        let accessed : String = format!("{}", temp.format("%T on %d/%m/%Y"));
+        temp = metadata.created().unwrap().into();
+        let created : String = format!("{}", temp.format("%T on %d/%m/%Y"));
+        temp = metadata.modified().unwrap().into();
+        let modified : String = format!("{}", temp.format("%T on %d/%m/%Y"));
         // if debug {
         //     print!("{:#?}", metadata);
         // };
-        let output : String = format!("Last accessed: {:?}\nCreated: {:?}\nLast Modified: {:?}\nLength: {:?}, Permissions: {:?}", metadata.accessed(), metadata.created(), metadata.modified(), metadata.len(), metadata.permissions());
+        let output : String = format!("Last accessed: {}\nCreated:       {}\nLast Modified: {}\nLength:        {} characters\nPermissions:   {}", accessed, created, modified, metadata.len(), if metadata.permissions().readonly() {"Read only"} else {"Writeable"});
         output
     }
 }
