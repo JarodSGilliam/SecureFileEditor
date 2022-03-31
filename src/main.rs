@@ -82,6 +82,8 @@ fn main() {
     // Counts the number of operations that have been executed since the last autosave or file opening
     let mut operations : usize = 0;
 
+    let mut the_text_that_is_being_searched_for = String::new();
+
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
@@ -93,7 +95,10 @@ fn main() {
             Err(e) => eprint!("{}", e),
         };
 
-        let mut the_text_that_is_being_searched_for = String::new();
+        if the_text_that_is_being_searched_for != "" {
+            screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str(), the_text_that_is_being_searched_for.as_str());
+        }
+        the_text_that_is_being_searched_for = String::new();
         
         // Watches for key commands
         if let Event::Key(event) = event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
@@ -151,6 +156,7 @@ fn main() {
                             None => String::new(),
                         };
                         print!("\nThe text the user was looking for: {}", the_text_that_is_being_searched_for);
+                        screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str());
                         screens_stack.pop();
                         let cursor_location = match screens_stack.first_mut() {
                             Some(t) => t.active_cursor_location,
