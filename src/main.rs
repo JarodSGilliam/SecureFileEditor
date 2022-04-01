@@ -749,4 +749,80 @@ fn test_alt_screen() -> CResult<()> {
     io::stdin().read_line(&mut s).expect("failed to read input");
     thread::sleep(time::Duration::from_millis(1500)); */
     execute!(stdout(), LeaveAlternateScreen)    //move back to main screen
+
+
+    
+}
+
+/*
+    This is a test function to see if the Regex crate is really necessary.
+    It uses the String::find function to see if the user's search text is
+    present in the main Display's contents field. If so, it calls the 
+    get_newx_newy function to determine the new ip_x and ip_y values for
+    moving the cursor. Otherwise, it will return a tuple of None's.
+*/
+
+fn find_text(disp: &Display, text: String) -> (Option<usize>, Option<usize>) {
+    //println!("{}", disp.contents);
+    match disp.contents.find(&text) {
+        Some(t) => {
+            println!("{}", t);
+            let (new_x, new_y) = get_newx_newy(&disp.contents, t);
+            //println!("{}, {}", new_x, new_y);
+            return (Some(new_x), Some(new_y));
+        },
+        None => {
+            //println!("Not Found");
+            return (None, None);
+        },
+    }
+}
+
+/*
+    This function aims to find the new ip_x and ip_y values
+    for the cursor after finding the user's search text.
+
+    Algorithm is as follows:
+        Using position as the total # of characters the cursor must advance
+        to find the new location, we iterate over each line of the file contents,
+        paying special attention to each line's length. After each line, we increment
+        the y_val, which will become the new ip_y value. The line's length in relation to
+        the position parameter determines if that line contains the new location or not.
+        Once we find the line that does contain the new position, we iterate over that line's 
+        characters, adding up the total number of spaces traversed, until we reach an amount
+        equal to the position parameter, at which point we update x_val, which will become the new
+        ip_x value. Finally, we return a tuple containing both x_val and y_val.
+*/
+
+fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
+    let v: Vec<&str> = contents.split("\n").collect(); //collect lines of contents
+    let mut x_val = 0;
+    let mut y_val = 0;
+    let mut total = 0;
+    'outer: for line in &v {
+        if ((line.len()) + total < position) { //if position not on this line
+            //println!("len: {}", line.len());
+            total = total + line.len() + 1;
+            y_val += 1;
+            //println!("total: {}", total);
+        } else if ((line.len()) + total == position) { //if position at end of this line
+            //println!("here");
+            total = total + line.len();
+            x_val = line.len();
+        } else if ((line.len() + total) > position) { //if position somewhere in this line
+            //println!("final len: {}", line.len());
+            let mut i = 1;
+
+            for c in line.chars() {
+                //println!("iterating on {}", c);
+                if (total + i) == position {
+                    x_val = (i) as usize;
+                    break 'outer;
+                }
+                i += 1;
+            }
+
+        }
+    }
+    (x_val, y_val)
 }
