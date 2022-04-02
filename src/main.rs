@@ -87,7 +87,7 @@ fn main() {
 
     let mut the_text_that_is_being_searched_for = String::new();
 
-    let help_text = "Ctrl + h = help page \nCtrl + f = find\nCtrl + w = close file";
+    let help_text = "Ctrl + h = help page \nCtrl + f = find\nCtrl + w = close file\n[Esc] to leave this screen";
 
     // PROGRAM RUNNING
     loop {
@@ -189,12 +189,31 @@ fn main() {
                         print!("\nThe text the user was looking for: {}", the_text_that_is_being_searched_for);
                         screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str());
                         screens_stack.pop();
+
+                        let (res1, res2) = find_text(screens_stack.first().unwrap(), &the_text_that_is_being_searched_for);
+                        
+                        match res1 {
+                            Some(t) => {
+                                screen.key_handler.ip_x = res1.unwrap();
+                                screen.key_handler.ip_y = res2.unwrap();
+                            },
+                            None => {
+                                let cursor_location = match screens_stack.first_mut() {
+                                    Some(t) => t.active_cursor_location,
+                                    None => {break},
+                                };
+                                screen.key_handler.ip_x = cursor_location.0;
+                                screen.key_handler.ip_y = cursor_location.1;
+                            },
+                        }
+/*
                         let cursor_location = match screens_stack.first_mut() {
                             Some(t) => t.active_cursor_location,
                             None => {break},
                         };
                         screen.key_handler.ip_x = cursor_location.0;
                         screen.key_handler.ip_y = cursor_location.1;
+                        */
                     }
                 },
 
@@ -243,7 +262,7 @@ fn main() {
                         */
                         
                         
-                    }
+                    } 
                 },
 
                 KeyEvent {
@@ -762,11 +781,11 @@ fn test_alt_screen() -> CResult<()> {
     moving the cursor. Otherwise, it will return a tuple of None's.
 */
 
-fn find_text(disp: &Display, text: String) -> (Option<usize>, Option<usize>) {
+fn find_text(disp: &Display, text: &String) -> (Option<usize>, Option<usize>) {
     //println!("{}", disp.contents);
-    match disp.contents.find(&text) {
+    match disp.contents.find(text) {
         Some(t) => {
-            println!("{}", t);
+            //println!("{}", t);
             let (new_x, new_y) = get_newx_newy(&disp.contents, t);
             //println!("{}, {}", new_x, new_y);
             return (Some(new_x), Some(new_y));
