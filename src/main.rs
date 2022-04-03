@@ -1,7 +1,5 @@
-use std::io::{Read, stdout, Write, ErrorKind,Cursor, BufRead};
-use std::fs::{File, OpenOptions};
+use std::io::{stdout, Write, BufRead};
 use std::{cmp, env, fs, io, thread, time};
-use std::error::Error;
 
 use crossterm::{event, terminal, execute, cursor, queue, style};
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
@@ -10,8 +8,8 @@ use crossterm::terminal::ClearType;
 use crossterm::style::Print;
 use crossterm::Result as CResult;
 
-use chrono::DateTime;
-use chrono::offset::Local;
+pub mod file_io;
+use file_io::FileIO as FileIO;
 
 //use device_query::{DeviceQuery, DeviceState, Keycode};
 
@@ -56,22 +54,8 @@ fn main() {
     // Creates a stack of screens
     let mut screens_stack : Vec<Display> = Vec::new();
     
-    // Creates the screen for the file contents
-    let mut file_screen : Display = Display::new(DisplayType::Text);
-    match &opened_file_path {
-        Some(f) => {
-            let test = FileIO::read_from_file(&f);
-            match test {
-                Ok(f) => file_screen.set_contents(String::from(f)),
-                Err(e) => {
-                    eprintln!("{}", e);
-                    panic!("ERROR");
-                }
-            }
-        },
-        None => file_screen.set_contents(String::new())
-    }
-    screens_stack.push(file_screen);
+    // Creates the screen for interacting with the file
+    screens_stack.push(Display::new_with_contents(DisplayType::Text, FileIO::get_file_contents(&opened_file_path)));
 
     // Setup
     match crossterm::terminal::enable_raw_mode() {
@@ -80,14 +64,12 @@ fn main() {
     };
     
     //Creates the screen on which everything is displayed
-    let mut screen=Screen::new();
+    let mut screen : Screen = Screen::new();
     
     // Counts the number of operations that have been executed since the last autosave or file opening
     let mut operations : usize = 0;
 
     let mut the_text_that_is_being_searched_for = String::new();
-
-    let help_text = "Ctrl + h = help page \nCtrl + f = find\nCtrl + w = close file\n[Esc] to leave this screen";
 
     // PROGRAM RUNNING
     loop {
@@ -140,7 +122,7 @@ fn main() {
                     });
                     
                     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
-                    screens_stack.last_mut().unwrap().set_contents(String::from(FileIO::print_metadata(FileIO::get_file(&pathname).unwrap())));
+                    screens_stack.last_mut().unwrap().set_contents(String::from(FileIO::get_metadata(FileIO::get_file(&pathname).unwrap())));
                     match screen.refresh_screen(match screens_stack.last() {
                         Some(t) => t,
                         None => {break},
@@ -174,7 +156,7 @@ fn main() {
                         if the_text_that_is_being_searched_for != "" {
                             screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str(), the_text_that_is_being_searched_for.as_str());
                             the_text_that_is_being_searched_for = String::new();
-                            break;
+                            continue;
                         }
                         screen.key_handler.insertion(KeyCode::Enter, match screens_stack.last_mut() {
                             Some(t) => t,
@@ -194,7 +176,7 @@ fn main() {
                         let (res1, res2) = find_text(screens_stack.first().unwrap(), &the_text_that_is_being_searched_for);
                         
                         match res1 {
-                            Some(t) => {
+                            Some(_t) => {
                                 screen.key_handler.ip_x = res1.unwrap();
                                 screen.key_handler.ip_y = res2.unwrap();
                             },
@@ -248,9 +230,7 @@ fn main() {
                     modifiers:event::KeyModifiers::CONTROL,
                 } => {
                     if screens_stack.last().unwrap().display_type != DisplayType::Help {
-                        Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
-                        screens_stack.last_mut().unwrap().set_prompt(String::from("Help:"));
-                        screens_stack.last_mut().unwrap().set_contents(String::from(help_text));
+                        add_help_screen(&mut screen, &mut screens_stack);
                     }
                 }
 
@@ -317,9 +297,7 @@ fn main() {
                         screen.key_handler.ip_y = cursor_location.1;
                     } else {
                         if screens_stack.last().unwrap().display_type != DisplayType::Help {
-                            Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
-                            screens_stack.last_mut().unwrap().set_prompt(String::from("Help:"));
-                            screens_stack.last_mut().unwrap().set_contents(String::from(help_text));
+                            add_help_screen(&mut screen, &mut screens_stack);
                         }
                     }
                 },
@@ -360,123 +338,11 @@ fn main() {
         // EXIT
 }
 
-// Deals with all the reading and writing to the file
-struct FileIO;
-impl FileIO {
-    /* Read from the file */
-    fn read_from_file(pathname: &String) -> Result<String, io::Error> {
-        let mut data = String::new();
-        File::open(pathname)?.read_to_string(&mut data)?;
-        Ok(data)
-    }
-
-    fn read_from_file_object(mut file : &File) -> Result<String, io::Error> {
-        let mut output = String::new();
-        file.read_to_string(& mut output)?;
-        Ok(output)
-    }
-
-    // Gets the file at the given location, returns None if it does not exist
-    fn get_file(file_path : &String) -> Option<File> {
-        let f = File::open(file_path);
-        match f {
-            Ok(file) => Some(file),
-            Err(error) => match error.kind() {
-                ErrorKind::NotFound => None,
-                other_error => {
-                    panic!("Problem opening the file: {:?}", other_error)
-                }
-            }
-        } 
-    }
-
-    fn create_file(file_path : &String) -> File {
-        match File::create(file_path) {
-            Ok(fc) => fc,
-            Err(e) => panic!("Problem creating the file: {:?}", e),
-        }
-    }
-
-    fn append_to_file(pathname : &String, new_text : &String) -> Result<bool, io::Error> {
-        let mut file = OpenOptions::new().write(true).append(true).open(pathname).unwrap();
-        write!(file, "{}", new_text)?;
-        Ok(true)
-    }
-
-    fn overwrite_to_file(pathname : &String, new_text : &String) -> Result<bool, io::Error> {
-        FileIO::create_file(pathname); // If applied to a file that exists it wipes the file contents
-        FileIO::append_to_file(pathname, new_text)
-    }
-
-    fn auto_save(pathname : &Option<String>, current_state_of_text : &String) {
-        println!("Autosaving...");
-        let pathname : String = {
-            match pathname {
-                Some(s) => FileIO::get_auto_save_path(s),
-                None => String::from(""),
-            }
-        };
-        let result = FileIO::overwrite_to_file(&pathname, current_state_of_text);
-        match result {
-            Ok(_f) => {
-                println!("Autosaved");
-            },
-            Err(e) => {
-                eprintln!("There was an error autosaving: {}", e)
-            },
-        }
-    }
-
-    fn get_auto_save_path(pathname : &String) -> String {
-        format!("{}~", pathname)
-    }
-    
-    fn delete_auto_save(pathname : &String) {
-        FileIO::delete_file(&FileIO::get_auto_save_path(pathname));
-    }
-
-    fn check_for_auto_save(pathname : &String) -> bool{
-        match FileIO::get_file(&FileIO::get_auto_save_path(pathname)) {
-            Some(_f) => {
-                true
-            },
-            None => {
-                false
-            }
-        }
-    }
-
-    fn delete_file(pathname : &String) {
-        let result = fs::remove_file(pathname);
-        match result {
-            Ok(_f) => {
-                println!("File deleted");
-            }
-            Err(e) => {
-                eprintln!("Error deleting file: {}", e);
-            }
-        }
-    }
-
-    fn print_metadata(file : File) -> String {
-        // let debug = true;
-        let metadata = match file.metadata() {
-            Err(e) => panic!("Could not get metadata from file: {}", e),
-            Ok(f) => f,
-        };
-        
-        let mut temp : DateTime<Local> = metadata.accessed().unwrap().into();
-        let accessed : String = format!("{}", temp.format("%T on %d/%m/%Y"));
-        temp = metadata.created().unwrap().into();
-        let created : String = format!("{}", temp.format("%T on %d/%m/%Y"));
-        temp = metadata.modified().unwrap().into();
-        let modified : String = format!("{}", temp.format("%T on %d/%m/%Y"));
-        // if debug {
-        //     print!("{:#?}", metadata);
-        // };
-        let output : String = format!("Last accessed: {}\nCreated:       {}\nLast Modified: {}\nLength:        {} characters\nPermissions:   {}", accessed, created, modified, metadata.len(), if metadata.permissions().readonly() {"Read only"} else {"Writeable"});
-        output
-    }
+fn add_help_screen(screen : &mut Screen, screens_stack : &mut Vec<Display>) {
+    Display::new_on_stack(screen, screens_stack, DisplayType::Help);
+    screens_stack.last_mut().unwrap().set_prompt(String::from("Help:"));
+    let help_text : String = FileIO::read_from_file(&String::from("help.txt")).unwrap_or(String::from("Help file not found. More on \"https://github.com/JarodSGilliam/SecureFileEditor\""));
+    screens_stack.last_mut().unwrap().set_contents(help_text);
 }
 
 /*
@@ -591,7 +457,7 @@ impl KeyHandler {
                         //do nothing since insertion point is at origin (top-left)
                     }
                     else {
-                        let deleted : char = on_screen.contents.remove(self.get_current_location_in_string()-1);
+                        let _deleted : char = on_screen.contents.remove(self.get_current_location_in_string()-1);
                         self.ip_x=self.rows[self.ip_y-1]-1;
                         self.rows[self.ip_y-1]+=self.rows[self.ip_y]-1;
                         self.rows.remove(self.ip_y);
@@ -670,8 +536,17 @@ struct Display {
 impl Display {
     fn new(display_type : DisplayType) -> Display {
         Display {
-            display_type : display_type,
+            display_type,
             contents: String::new(),
+            prompt : String::new(),
+            active_cursor_location : (0, 0),
+        }
+    }
+
+    fn new_with_contents(display_type : DisplayType, contents: String) -> Display {
+        Display {
+            display_type,
+            contents,
             prompt : String::new(),
             active_cursor_location : (0, 0),
         }
@@ -685,9 +560,9 @@ impl Display {
         self.prompt = new_prompt + "\n";
     }
     
-    fn insert_content_here(&mut self, before_here : usize, new_string : String) {
-        self.contents = format!("{}{}{}",&self.contents[..before_here],new_string,&self.contents[before_here..]);
-    }
+    // fn insert_content_here(&mut self, before_here : usize, new_string : String) {
+    //     self.contents = format!("{}{}{}",&self.contents[..before_here],new_string,&self.contents[before_here..]);
+    // }
 
     fn save_active_cursor_location(&mut self, keyhandler : &KeyHandler) {
         self.active_cursor_location = (keyhandler.ip_x, keyhandler.ip_y);
@@ -699,6 +574,7 @@ impl Display {
     }
     */
 
+    // Saves the location of the cursor on the screen, creates a new display, resets the cursor location to 0, 0.
     fn new_on_stack(screen : &mut Screen, screens_stack : &mut Vec<Display>, display_type : DisplayType) {
         match screens_stack.first_mut() {
             Some(t) => t.save_active_cursor_location(&screen.key_handler),
@@ -735,7 +611,7 @@ impl Screen {
     //print the char, and get the char of each row, get the total row number
     fn draw_content(&mut self, on_screen: &Display) {
         // let screen_rows = self.screen_size.1;
-        let mut content = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
+        let content = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
         let temp2 = on_screen.contents.clone();
         let calculator : Vec<&str> = temp2.split("\n").collect();
         self.key_handler.columns = calculator.len();
@@ -770,9 +646,9 @@ impl Screen {
         stdout.flush()
     }
 
-    fn move_cursor(&mut self, operation:KeyCode) {
-        self.key_handler.move_ip(operation);
-    }
+    // fn move_cursor(&mut self, operation:KeyCode) {
+    //     self.key_handler.move_ip(operation);
+    // }
 }
 
 
@@ -808,9 +684,6 @@ fn test_alt_screen() -> CResult<()> {
     io::stdin().read_line(&mut s).expect("failed to read input");
     thread::sleep(time::Duration::from_millis(1500)); */
     execute!(stdout(), LeaveAlternateScreen)    //move back to main screen
-
-
-    
 }
 
 /*
@@ -859,20 +732,20 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
     let mut y_val = 0;
     let mut total = 0;
     'outer: for line in &v {
-        if ((line.len()) + total < position) { //if position not on this line
+        if (line.len()) + total < position { //if position not on this line
             //println!("len: {}", line.len());
             total = total + line.len() + 1;
             y_val += 1;
             //println!("total: {}", total);
-        } else if ((line.len()) + total == position) { //if position at end of this line
+        } else if (line.len()) + total == position { //if position at end of this line
             //println!("here");
             total = total + line.len();
             x_val = line.len();
-        } else if ((line.len() + total) > position) { //if position somewhere in this line
+        } else if (line.len() + total) > position { //if position somewhere in this line
             //println!("final len: {}", line.len());
             let mut i = 1;
 
-            for c in line.chars() {
+            for _c in line.chars() {
                 //println!("iterating on {}", c);
                 if (total + i) == position {
                     x_val = (i) as usize;

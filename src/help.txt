@@ -1,0 +1,4 @@
+Ctrl + h = help page
+Ctrl + f = find
+Ctrl + w = close file
+[Esc] to leave this screen
