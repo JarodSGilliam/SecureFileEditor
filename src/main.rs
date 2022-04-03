@@ -100,11 +100,6 @@ fn main() {
             Err(e) => eprint!("{}", e),
         };
 
-        if the_text_that_is_being_searched_for != "" {
-            screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str(), the_text_that_is_being_searched_for.as_str());
-        }
-        the_text_that_is_being_searched_for = String::new();
-        
         // Watches for key commands
         if let Event::Key(event) = event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
             match event {
@@ -175,13 +170,19 @@ fn main() {
                     code:KeyCode::Enter,
                     modifiers:event::KeyModifiers::NONE,
                 } => {
-                    if screens_stack.len() == 1 {
+                    if screens_stack.last().unwrap().display_type == DisplayType::Text {
+                        if the_text_that_is_being_searched_for != "" {
+                            screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str(), the_text_that_is_being_searched_for.as_str());
+                            the_text_that_is_being_searched_for = String::new();
+                            break;
+                        }
                         screen.key_handler.insertion(KeyCode::Enter, match screens_stack.last_mut() {
                             Some(t) => t,
                             None => {break},
-                        })
+                        });
+                        continue;
                     }
-                    if screens_stack.len() > 1 {
+                    if screens_stack.last().unwrap().display_type == DisplayType::Find {
                         the_text_that_is_being_searched_for = match screens_stack.last() {
                             Some(t) => String::from(t.contents.as_str()),
                             None => String::new(),
@@ -206,7 +207,7 @@ fn main() {
                                 screen.key_handler.ip_y = cursor_location.1;
                             },
                         }
-/*
+                        /*
                         let cursor_location = match screens_stack.first_mut() {
                             Some(t) => t.active_cursor_location,
                             None => {break},
@@ -214,6 +215,31 @@ fn main() {
                         screen.key_handler.ip_x = cursor_location.0;
                         screen.key_handler.ip_y = cursor_location.1;
                         */
+                        continue;
+                    }
+                    if screens_stack.last().unwrap().display_type == DisplayType::ReplaceP1 {
+                        the_text_that_is_being_searched_for = match screens_stack.last() {
+                            Some(t) => String::from(t.contents.as_str()),
+                            None => String::new(),
+                        };
+                        // screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str());
+                        screens_stack.pop();
+                        Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::ReplaceP2);
+                        screens_stack.last_mut().unwrap().set_prompt(String::from("Replace P2:\nReplace:"));
+                        println!("{}", the_text_that_is_being_searched_for);
+                        continue;
+                    }
+                    if screens_stack.last().unwrap().display_type == DisplayType::ReplaceP2 {
+                        let to_replace = match screens_stack.last() {
+                            Some(t) => String::from(t.contents.as_str()),
+                            None => String::new(),
+                        };
+                        screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), to_replace.as_str());
+                        screens_stack.pop();
+                        the_text_that_is_being_searched_for = String::from("");
+                        // for
+                        println!("{}", to_replace);
+                        continue;
                     }
                 },
 
@@ -264,6 +290,18 @@ fn main() {
                         
                     } 
                 },
+
+                // Triggers find screen
+                KeyEvent {
+                    code: KeyCode::Char('r'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                    
+                } => {
+                    if screens_stack.len() == 1 {
+                        Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::ReplaceP1);
+                        screens_stack.last_mut().unwrap().set_prompt(String::from("Replace P1:\nFind:"));
+                    }
+                }
 
                 KeyEvent {
                     code: KeyCode::Esc,
@@ -616,6 +654,8 @@ enum DisplayType {
     Text,
     Find,
     Help,
+    ReplaceP1,
+    ReplaceP2,
 }
 
 /*
