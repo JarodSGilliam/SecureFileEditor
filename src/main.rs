@@ -728,24 +728,18 @@ impl Screen {
     }
     //print the char, and get the char of each row, get the total row number
     fn draw_content(&mut self, on_screen: &Display) {
-        // let screen_rows = self.screen_size.1;
-        let content = on_screen.contents.replace('\n', "\r\n"); //.replace("\t", "    ")
-        let temp = on_screen.contents.clone();
-        let calculator: Vec<&str> = temp.split("\n").collect();
+        let calculator: Vec<&str> =on_screen.contents.split("\n").collect();
         self.key_handler.num_of_rows = calculator.len();
         let mut rows: Vec<usize> = Vec::new();
-        let mut rows_temp: Vec<usize> = Vec::new();
         for i in &calculator {
             rows.push(i.len() + 1);
-            rows_temp.push(i.len());
         }
-        self.key_handler.chars_in_row = rows;
-        let mut temp = String::new();
+        let mut content = String::new();
         for i in 0..self.key_handler.screen_rows {
             let row_in_content = i + self.key_handler.row_offset;
             if row_in_content < self.key_handler.num_of_rows {
                 let len = cmp::min(
-                    rows_temp[row_in_content].saturating_sub(self.key_handler.column_offset),
+                    (rows[row_in_content]-1).saturating_sub(self.key_handler.column_offset),
                     self.key_handler.screen_cols,
                 );
                 let start = if len == 0 {
@@ -753,15 +747,15 @@ impl Screen {
                 } else {
                     self.key_handler.column_offset
                 };
-                temp.push_str(&calculator[row_in_content].to_string()[start..start + len]);
+                content.push_str(&calculator[row_in_content].to_string()[start..start + len]);
                 if i < self.key_handler.screen_rows - 1 {
-                    temp.push_str("\r\n");
+                    content.push_str("\r\n");
                 }
             }
         }
-        // content += format!("{}", content.len()).as_str();
+        self.key_handler.chars_in_row = rows;
         queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
-        queue!(stdout(), Print(temp)).unwrap();
+        queue!(stdout(), Print(content)).unwrap();
     }
 
     /*
