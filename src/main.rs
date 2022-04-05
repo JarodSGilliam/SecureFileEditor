@@ -174,16 +174,16 @@ fn main() {
                 } => {
                     match screens_stack.last().unwrap().display_type {
                         DisplayType::Text => {
-                            if the_text_that_is_being_searched_for != "" {
-                                screens_stack.first_mut().unwrap().contents =
-                                    screens_stack.first_mut().unwrap().contents.replace(
+                            if the_text_that_is_being_searched_for != "" { //fix here
+                                /* screens_stack.first_mut().unwrap().contents =
+                                     screens_stack.first_mut().unwrap().contents.replace(
                                         format!(
                                             "|{}|",
                                             the_text_that_is_being_searched_for.as_str()
                                         )
                                         .as_str(),
                                         the_text_that_is_being_searched_for.as_str(),
-                                    );
+                                    ); */ 
                                 the_text_that_is_being_searched_for = String::new();
                                 continue;
                             }
@@ -212,26 +212,72 @@ fn main() {
                                 .contents
                                 .matches(&the_text_that_is_being_searched_for)
                                 .count();
-                            screens_stack.first_mut().unwrap().set_prompt(format!(
-                                "Found {} matches: Ctrl + P for previous, Ctrl + N for next",
-                                number_found
-                            ));
-                            screens_stack.first_mut().unwrap().contents =
+                            
+                            if number_found > 0 {
+                                screens_stack.first_mut().unwrap().set_prompt(format!(
+                                    "Found {} matches: Ctrl + P for previous, Ctrl + N for next",
+                                    number_found
+                                ));
+                            } else {
+                                screens_stack.first_mut().unwrap().set_prompt(format!(
+                                    "Found {} matches: Try searching for something else",
+                                    number_found
+                                ));
+                            }
+                            /* screens_stack.first_mut().unwrap().contents =    //fix here
                                 screens_stack.first_mut().unwrap().contents.replace(
                                     the_text_that_is_being_searched_for.as_str(),
                                     format!("|{}|", the_text_that_is_being_searched_for.as_str())
                                         .as_str(),
-                                );
+                                ); */
                             screens_stack.pop();
+
+                            //Find & Move Cursor operation below
+
+                            let mut indices = get_indices(&screens_stack.first().unwrap().contents,
+                                &the_text_that_is_being_searched_for, number_found);                //list of indices where find text occurs
+                            let mut coordinates = get_xs_and_ys(indices, 
+                                &screens_stack.first().unwrap().contents);                           //list of (x, y) pairs for moving the cursor
 
                             let (res1, res2) = find_text(
                                 screens_stack.first().unwrap(),
                                 &the_text_that_is_being_searched_for,
                             );
                             match res1 {
-                                Some(_t) => {
+                                Some(_t) => {       //if res1 is not a None, then at least one occurrence was found
                                     screen.key_handler.ip_x = res1.unwrap();
                                     screen.key_handler.ip_y = res2.unwrap();
+                                    let mut point = 0;
+                                    loop {
+                                        if let Event::Key(event) = 
+                                        event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
+                                            match event {
+                                                KeyEvent {      //user pressed Ctrl+n, advance to next instance
+                                                    code: KeyCode::Char('n'),
+                                                    modifiers: event::KeyModifiers::CONTROL,
+                                                } => {
+                                                    if point < coordinates.len() - 1 {
+                                                        point += 1;
+                                                        screen.key_handler.ip_x = coordinates[point].0;
+                                                        screen.key_handler.ip_y = coordinates[point].1;
+                                                    }
+                                                },
+
+                                                KeyEvent {      //user presed Ctrl+p, revert to previous instance
+                                                    code: KeyCode::Char('p'),
+                                                    modifiers: event::KeyModifiers::CONTROL,
+                                                } => {
+                                                    if point > 0 {
+                                                        point -= 1;
+                                                        screen.key_handler.ip_x = coordinates[point].0;
+                                                        screen.key_handler.ip_y = coordinates[point].1;
+                                                    }
+                                                },
+
+                                                _ => break     //all else, break the loop
+                                            }
+                                        }
+                                    }   //end of loop
                                 }
                                 None => {
                                     let cursor_location = match screens_stack.first_mut() {
@@ -250,7 +296,7 @@ fn main() {
                             screen.key_handler.ip_x = cursor_location.0;
                             screen.key_handler.ip_y = cursor_location.1;
                             */
-                            continue;
+                            //continue;
                         }
                         DisplayType::ReplaceP1 => {
                             the_text_that_is_being_searched_for = match screens_stack.last() {
@@ -899,4 +945,59 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
         }
     }
     (x_val, y_val)
+}
+
+/*
+    This function is intended to get all the indices of a piece of text that
+    the user wants to find. It will return a vector of usizes, representing all the
+    indices where the found text appears. This is very important for the find function
+    to be able to move between the found instances.
+*/
+
+fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
+    let mut new_str = contents.clone();
+    let mut res_vec = Vec::new();
+    while res_vec.len() < count {
+        match new_str.find(text) {
+            Some(t) => {
+                //println!("new_str: {}", new_str);
+                if res_vec.len() > 0 {
+                    let temp = res_vec[res_vec.len() - 1];
+                    res_vec.push(t + temp + 1);
+                    //println!("pushing_ {}", t + temp + 1);
+                } else {
+                    res_vec.push(t);
+                    //println!("pushing: {}", t);
+                }
+                //res_vec.push(t);
+                new_str = new_str.split_at(t+1).1.to_string();
+                //println!("new_str_: {}", new_str);
+            },
+            None => {},
+        }
+    }
+
+    res_vec
+}
+
+/*
+    This funciton is designed to build a list of tuples,
+    each containing an (x, y) value that the user can
+    traverse with ip_x and ip_y to move the cursor between
+    instances of the found text. It relies on the get_newx_newy() function
+    to accomplish this.
+
+    It takes in a vector of usize (indices) and a String reference. It then iterates
+    through each usize in the vector, calling the get_newx_newy function on the usize and
+    the string ref, then pushes the returned tuple into a new vector. It returns this new vector
+    at the end of execution.
+*/
+
+fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
+    let mut res_vec: Vec<(usize, usize)> = Vec::new();
+    for entry in list {
+        res_vec.push(get_newx_newy(contents, entry));   //get the x, y coordinates from an index
+    }
+
+    res_vec
 }
