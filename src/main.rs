@@ -568,24 +568,14 @@ impl KeyHandler {
     fn move_ip(&mut self, operation: KeyCode) {
         match operation {
             KeyCode::Up => {
-                if self.ip_y < 1 {
-                    //scoll up
-                } else {
+                if self.ip_y >0{
                     self.ip_y -= 1;
-                    let new_max_x = self.bytes_in_row.get(self.ip_y).unwrap();
-                    if new_max_x <= &self.ip_x {
-                        self.ip_x = *new_max_x - 1;
-                    }
                 }
             }
             KeyCode::Down => {
                 if self.ip_y < self.num_of_rows - 1 {
                     // if self.ip_y != self.screen_rows - 1 {
                     self.ip_y += 1;
-                    let new_max_x = self.bytes_in_row.get(self.ip_y).unwrap();
-                    if new_max_x <= &self.ip_x {
-                        self.ip_x = new_max_x - 1;
-                    }
                     // }
                 }
             }
@@ -594,35 +584,33 @@ impl KeyHandler {
                     self.ip_x -= 1;
                 } else {
                     if self.ip_y > 0 {
-                        self.ip_x = self.bytes_in_row.get(self.ip_y - 1).unwrap() - 1;
+                        self.ip_x = self.width_in_row.get(self.ip_y - 1).unwrap() - 1;
                     }
                     KeyHandler::move_ip(self, KeyCode::Up);
                 }
             }
             KeyCode::Right => {
-                let this_row = match self.bytes_in_row.get(self.ip_y) {
-                    Some(i) => i,
-                    None => panic!("error"),
-                };
+                let this_row = self.width_in_row.get(self.ip_y).unwrap();
                 if self.ip_y < self.num_of_rows - 1 {
-                    if self.ip_x != this_row - 1 {
+                    if self.ip_x < this_row - 1 {
                         self.ip_x += 1;
                     } else {
                         self.ip_x = 0;
                         self.ip_y += 1;
                     }
                 } else {
-                    if self.ip_x != this_row - 1 {
+                    if self.ip_x < this_row - 1 {
                         self.ip_x += 1;
                     }
                 } // else is for default, the limit is set to be the screen size for further adjustment
             }
-            KeyCode::End => self.ip_x = self.bytes_in_row[self.ip_y] - 1,
+            KeyCode::End => self.ip_x = self.width_in_row.get(self.ip_y).unwrap() - 1,
             KeyCode::Home => {
                 self.ip_x = 0;
             }
             _ => {} //more code needed
         }
+        self.ip_x=cmp::min(self.ip_x,self.width_in_row.get(self.ip_y).unwrap()-1);
     }
 
     fn insertion(&mut self, operation: KeyCode, on_screen: &mut Display) {
