@@ -8,6 +8,9 @@ use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::Result as CResult;
 use crossterm::{cursor, event, execute, queue, style, terminal};
 
+use unicode_truncate::UnicodeTruncateStr;
+use unicode_width::UnicodeWidthStr;
+
 pub mod file_io;
 use file_io::FileIO;
 
@@ -76,14 +79,14 @@ fn main() {
     let mut the_text_that_is_being_searched_for = String::new();
     let mut find_mode: bool = true;
 
-    let mut indices: Vec<usize> = Vec::new();                //list of indices where find text occurs
-    let mut coordinates: Vec<(usize, usize)> = Vec::new();   //list of x,y pairs for the cursor after find
-    let mut point = 0;                                       //used to traverse found instances
+    let mut indices: Vec<usize> = Vec::new(); //list of indices where find text occurs
+    let mut coordinates: Vec<(usize, usize)> = Vec::new(); //list of x,y pairs for the cursor after find
+    let mut point = 0; //used to traverse found instances
 
     // render the context
     let mut row_content = screens_stack.first().unwrap().contents.clone();
     let mut eachrowcontent: EachRowContent = EachRowContent::new();
-    let mut rowcontent: RowContent = RowContent::new(row_content, String::new(),Vec::new());
+    let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new());
     let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
 
     // PROGRAM RUNNING
@@ -131,7 +134,8 @@ fn main() {
                     // break
                 }
 
-                KeyEvent {      //move to next occurrence
+                KeyEvent {
+                    //move to next occurrence
                     code: KeyCode::Char('n'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
@@ -140,9 +144,10 @@ fn main() {
                         screen.key_handler.ip_x = coordinates[point].0;
                         screen.key_handler.ip_y = coordinates[point].1;
                     }
-                },
+                }
 
-                KeyEvent {      //move to previous occurrence
+                KeyEvent {
+                    //move to previous occurrence
                     code: KeyCode::Char('p'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
@@ -152,7 +157,7 @@ fn main() {
                         screen.key_handler.ip_x = coordinates[point].0;
                         screen.key_handler.ip_y = coordinates[point].1;
                     }
-                },
+                }
 
                 KeyEvent {
                     code: KeyCode::Char('d'),
@@ -207,16 +212,17 @@ fn main() {
                 } => {
                     match screens_stack.last().unwrap().display_type {
                         DisplayType::Text => {
-                            if the_text_that_is_being_searched_for != "" { //fix here
+                            if the_text_that_is_being_searched_for != "" {
+                                //fix here
                                 /* screens_stack.first_mut().unwrap().contents =
-                                     screens_stack.first_mut().unwrap().contents.replace(
-                                        format!(
-                                            "|{}|",
-                                            the_text_that_is_being_searched_for.as_str()
-                                        )
-                                        .as_str(),
-                                        the_text_that_is_being_searched_for.as_str(),
-                                    ); */ 
+                                 screens_stack.first_mut().unwrap().contents.replace(
+                                    format!(
+                                        "|{}|",
+                                        the_text_that_is_being_searched_for.as_str()
+                                    )
+                                    .as_str(),
+                                    the_text_that_is_being_searched_for.as_str(),
+                                ); */
                                 the_text_that_is_being_searched_for = String::new();
                                 continue;
                             }
@@ -245,7 +251,6 @@ fn main() {
                                 .contents
                                 .matches(&the_text_that_is_being_searched_for)
                                 .count();
-                            
                             if number_found > 0 {
                                 screens_stack.first_mut().unwrap().set_prompt(format!(
                                     "Found {} matches: Ctrl + P for previous, Ctrl + N for next",
@@ -258,35 +263,38 @@ fn main() {
                                 ));
                             }
                             /* screens_stack.first_mut().unwrap().contents =    //fix here
-                                screens_stack.first_mut().unwrap().contents.replace(
-                                    the_text_that_is_being_searched_for.as_str(),
-                                    format!("|{}|", the_text_that_is_being_searched_for.as_str())
-                                        .as_str(),
-                                ); */
+                            screens_stack.first_mut().unwrap().contents.replace(
+                                the_text_that_is_being_searched_for.as_str(),
+                                format!("|{}|", the_text_that_is_being_searched_for.as_str())
+                                    .as_str(),
+                            ); */
                             screens_stack.pop();
 
                             //Find & Move Cursor operation below
 
-                            indices = get_indices(&screens_stack.first().unwrap().contents,
-                                &the_text_that_is_being_searched_for, number_found);                //list of indices where find text occurs
-                            coordinates = get_xs_and_ys(indices, 
-                                &screens_stack.first().unwrap().contents);                           //list of (x, y) pairs for moving the cursor
+                            indices = get_indices(
+                                &screens_stack.first().unwrap().contents,
+                                &the_text_that_is_being_searched_for,
+                                number_found,
+                            ); //list of indices where find text occurs
+                            coordinates =
+                                get_xs_and_ys(indices, &screens_stack.first().unwrap().contents); //list of (x, y) pairs for moving the cursor
 
                             let (res1, res2) = find_text(
                                 screens_stack.first().unwrap(),
                                 &the_text_that_is_being_searched_for,
                             );
                             match res1 {
-                                Some(_t) => {       //if res1 is not a None, then at least one occurrence was found
+                                Some(_t) => {
+                                    //if res1 is not a None, then at least one occurrence was found
                                     screen.key_handler.ip_x = res1.unwrap();
                                     screen.key_handler.ip_y = res2.unwrap();
                                     let mut point = 0;
                                     // highlight the searching results
                                     // (_t.._t + the_text_that_is_being_searched_for.len())
                                     // .for_each(|_t| rendercontent.highlight[_t] = HighLight::Search);
-                                    
                                     /* loop {
-                                        if let Event::Key(event) = 
+                                        if let Event::Key(event) =
                                         event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
                                             match event {
                                                 KeyEvent {      //user pressed Ctrl+n, advance to next instance
@@ -523,7 +531,8 @@ struct KeyHandler {
     ip_y: usize,
     screen_cols: usize,
     screen_rows: usize,
-    chars_in_row: Vec<usize>,
+    bytes_in_row: Vec<usize>,
+    width_in_row: Vec<usize>,
     num_of_rows: usize,
     row_offset: usize,
     column_offset: usize,
@@ -536,7 +545,8 @@ impl KeyHandler {
             ip_y: 0,
             screen_cols: window_size.0,
             screen_rows: window_size.1,
-            chars_in_row: Vec::new(),
+            bytes_in_row: Vec::new(),
+            width_in_row: Vec::new(),
             num_of_rows: 0,
             row_offset: 0,
             column_offset: 0,
@@ -562,7 +572,7 @@ impl KeyHandler {
                     //scoll up
                 } else {
                     self.ip_y -= 1;
-                    let new_max_x = self.chars_in_row.get(self.ip_y).unwrap();
+                    let new_max_x = self.bytes_in_row.get(self.ip_y).unwrap();
                     if new_max_x <= &self.ip_x {
                         self.ip_x = *new_max_x - 1;
                     }
@@ -572,7 +582,7 @@ impl KeyHandler {
                 if self.ip_y < self.num_of_rows - 1 {
                     // if self.ip_y != self.screen_rows - 1 {
                     self.ip_y += 1;
-                    let new_max_x = self.chars_in_row.get(self.ip_y).unwrap();
+                    let new_max_x = self.bytes_in_row.get(self.ip_y).unwrap();
                     if new_max_x <= &self.ip_x {
                         self.ip_x = new_max_x - 1;
                     }
@@ -584,17 +594,17 @@ impl KeyHandler {
                     self.ip_x -= 1;
                 } else {
                     if self.ip_y > 0 {
-                        self.ip_x = self.chars_in_row.get(self.ip_y - 1).unwrap() - 1;
+                        self.ip_x = self.bytes_in_row.get(self.ip_y - 1).unwrap() - 1;
                     }
                     KeyHandler::move_ip(self, KeyCode::Up);
                 }
             }
             KeyCode::Right => {
-                let this_row = match self.chars_in_row.get(self.ip_y) {
+                let this_row = match self.bytes_in_row.get(self.ip_y) {
                     Some(i) => i,
                     None => panic!("error"),
                 };
-                if self.ip_y < self.num_of_rows-1 {
+                if self.ip_y < self.num_of_rows - 1 {
                     if self.ip_x != this_row - 1 {
                         self.ip_x += 1;
                     } else {
@@ -607,7 +617,7 @@ impl KeyHandler {
                     }
                 } // else is for default, the limit is set to be the screen size for further adjustment
             }
-            KeyCode::End => self.ip_x = self.chars_in_row[self.ip_y] - 1,
+            KeyCode::End => self.ip_x = self.bytes_in_row[self.ip_y] - 1,
             KeyCode::Home => {
                 self.ip_x = 0;
             }
@@ -621,7 +631,7 @@ impl KeyHandler {
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(), c);
-                self.chars_in_row[self.ip_y] += 1;
+                self.bytes_in_row[self.ip_y] += 1;
                 self.ip_x += 1;
                 //println!("{:?}",self.rows);
                 //println!("bleh: {}\r", c);
@@ -632,7 +642,7 @@ impl KeyHandler {
                 on_screen
                     .contents
                     .insert_str(self.get_current_location_in_string(), "    ");
-                self.chars_in_row[self.ip_y] += 4;
+                self.bytes_in_row[self.ip_y] += 4;
                 self.ip_x += 4;
             }
             // KeyCode::Tab => {
@@ -648,23 +658,23 @@ impl KeyHandler {
                         let _deleted: char = on_screen
                             .contents
                             .remove(self.get_current_location_in_string() - 1);
-                        self.ip_x = self.chars_in_row[self.ip_y - 1] - 1;
-                        self.chars_in_row[self.ip_y - 1] += self.chars_in_row[self.ip_y] - 1;
-                        self.chars_in_row.remove(self.ip_y);
+                        self.ip_x = self.bytes_in_row[self.ip_y - 1] - 1;
+                        self.bytes_in_row[self.ip_y - 1] += self.bytes_in_row[self.ip_y] - 1;
+                        self.bytes_in_row.remove(self.ip_y);
                         self.ip_y -= 1;
                     }
                 } else {
                     on_screen
                         .contents
                         .remove(self.get_current_location_in_string() - 1);
-                    self.chars_in_row[self.ip_y] -= 1;
+                    self.bytes_in_row[self.ip_y] -= 1;
                     self.ip_x -= 1;
                 }
                 //println!("bleh: back\r");
             }
 
             KeyCode::Delete => {
-                if self.ip_x == self.chars_in_row[self.ip_y] {
+                if self.ip_x == self.bytes_in_row[self.ip_y] {
                     if self.ip_y == self.num_of_rows - 1 {
                         //do nothing since insertion point is at end of file (bottom-right)
                     } else {
@@ -672,15 +682,15 @@ impl KeyHandler {
                         on_screen
                             .contents
                             .remove(self.get_current_location_in_string());
-                        self.chars_in_row[self.ip_y] += self.chars_in_row[self.ip_y + 1] - 1;
-                        self.chars_in_row.remove(self.ip_y + 1);
+                        self.bytes_in_row[self.ip_y] += self.bytes_in_row[self.ip_y + 1] - 1;
+                        self.bytes_in_row.remove(self.ip_y + 1);
                         self.num_of_rows -= 1;
                     }
                 } else {
                     on_screen
                         .contents
                         .remove(self.get_current_location_in_string());
-                    self.chars_in_row[self.ip_y] -= 1;
+                    self.bytes_in_row[self.ip_y] -= 1;
                 }
             }
 
@@ -688,9 +698,9 @@ impl KeyHandler {
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(), '\n');
-                self.chars_in_row
-                    .insert(self.ip_y + 1, self.chars_in_row[self.ip_y] - self.ip_x);
-                self.chars_in_row[self.ip_y] = self.ip_x + 1;
+                self.bytes_in_row
+                    .insert(self.ip_y + 1, self.bytes_in_row[self.ip_y] - self.ip_x);
+                self.bytes_in_row[self.ip_y] = self.ip_x + 1;
                 self.ip_x = 0;
                 self.ip_y += 1;
             }
@@ -703,7 +713,7 @@ impl KeyHandler {
     fn get_current_location_in_string(&mut self) -> usize {
         let mut x = 0;
         for i in 0..self.ip_y {
-            x += self.chars_in_row[i];
+            x += self.bytes_in_row[i];
         }
         x += self.ip_x;
         //println!("{}",x);
@@ -811,18 +821,20 @@ impl Screen {
     }
     //print the char, and get the char of each row, get the total row number
     fn draw_content(&mut self, on_screen: &Display) {
-        let calculator: Vec<&str> =on_screen.contents.split("\n").collect();
+        let calculator: Vec<&str> = on_screen.contents.split("\n").collect();
         self.key_handler.num_of_rows = calculator.len();
-        let mut rows: Vec<usize> = Vec::new();
+        let mut width: Vec<usize> = Vec::new();
+        let mut bytes: Vec<usize> = Vec::new();
         for i in &calculator {
-            rows.push(i.len() + 1);
+            bytes.push(i.len() + 1);
+            width.push(UnicodeWidthStr::width(*i) + 1);
         }
         let mut content = String::new();
         for i in 0..self.key_handler.screen_rows {
             let row_in_content = i + self.key_handler.row_offset;
             if row_in_content < self.key_handler.num_of_rows {
                 let len = cmp::min(
-                    (rows[row_in_content]-1).saturating_sub(self.key_handler.column_offset),
+                    (bytes[row_in_content] - 1).saturating_sub(self.key_handler.column_offset),
                     self.key_handler.screen_cols,
                 );
                 let start = if len == 0 {
@@ -836,7 +848,8 @@ impl Screen {
                 }
             }
         }
-        self.key_handler.chars_in_row = rows;
+        self.key_handler.bytes_in_row = bytes;
+        self.key_handler.width_in_row = width;
         queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
         queue!(stdout(), Print(content)).unwrap();
     }
@@ -1007,10 +1020,10 @@ fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
                     //println!("pushing: {}", t);
                 }
                 //res_vec.push(t);
-                new_str = new_str.split_at(t+1).1.to_string();
+                new_str = new_str.split_at(t + 1).1.to_string();
                 //println!("new_str_: {}", new_str);
-            },
-            None => {},
+            }
+            None => {}
         }
     }
 
@@ -1033,27 +1046,26 @@ fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
 fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
     let mut res_vec: Vec<(usize, usize)> = Vec::new();
     for entry in list {
-        res_vec.push(get_newx_newy(contents, entry));   //get the x, y coordinates from an index
+        res_vec.push(get_newx_newy(contents, entry)); //get the x, y coordinates from an index
     }
     //println!("coordinates: {:?}", res_vec);
     res_vec
 }
 
-
 // render the tab
 // #[derive(PartialEq)]
-struct RowContent{
+struct RowContent {
     row_content: String,
     render: String,
     highlight: Vec<HighLight>,
 }
 
-struct EachRowContent{
-    row_content_each:Vec<RowContent>,
+struct EachRowContent {
+    row_content_each: Vec<RowContent>,
 }
 
-impl RowContent{
-    fn new(row_content: String, render: String,highlight:Vec<HighLight>) -> Self{
+impl RowContent {
+    fn new(row_content: String, render: String, highlight: Vec<HighLight>) -> Self {
         Self {
             row_content,
             render,
@@ -1061,15 +1073,14 @@ impl RowContent{
         }
     }
 }
-impl EachRowContent{
-    fn new() -> Self{
-        Self{
+impl EachRowContent {
+    fn new() -> Self {
+        Self {
             row_content_each: Vec::new(),
         }
-
     }
 
-    fn render_content(&self, row:&mut RowContent) {
+    fn render_content(&self, row: &mut RowContent) {
         let mut ip = 0;
         let capacity = row
             .row_content
@@ -1090,25 +1101,23 @@ impl EachRowContent{
         });
     }
 
-    pub fn make_render(&self, t:usize) -> &String{
+    pub fn make_render(&self, t: usize) -> &String {
         &self.row_content_each[t].render
     }
 
-    fn edit_row(&self, t:usize) ->&RowContent{
+    fn edit_row(&self, t: usize) -> &RowContent {
         &self.row_content_each[t]
     }
-   
 }
 
 // highlight the search result
-enum HighLight{
+enum HighLight {
     Normal,
     Search,
 }
 
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
-
 }
 
 #[macro_export]
@@ -1125,8 +1134,6 @@ macro_rules! highlight_struct {
                     HighLight::Search => Color::Blue,
                 }
             }
-              
         }
     };
 }
-
