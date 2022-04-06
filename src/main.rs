@@ -2,7 +2,7 @@ use std::io::{stdout, BufRead, Write};
 use std::{cmp, env, fs, io, thread, time};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::style::Print;
+use crossterm::style::*;
 use crossterm::terminal::ClearType;
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::Result as CResult;
@@ -79,6 +79,12 @@ fn main() {
     let mut indices: Vec<usize> = Vec::new();                //list of indices where find text occurs
     let mut coordinates: Vec<(usize, usize)> = Vec::new();   //list of x,y pairs for the cursor after find
     let mut point = 0;                                       //used to traverse found instances
+
+    // render the context
+    let mut row_content = screens_stack.first().unwrap().contents.clone();
+    let mut eachrowcontent: EachRowContent = EachRowContent::new();
+    let mut rowcontent: RowContent = RowContent::new(row_content, String::new(),Vec::new());
+    let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
 
     // PROGRAM RUNNING
     loop {
@@ -275,6 +281,10 @@ fn main() {
                                     screen.key_handler.ip_x = res1.unwrap();
                                     screen.key_handler.ip_y = res2.unwrap();
                                     let mut point = 0;
+                                    // highlight the searching results
+                                    // (_t.._t + the_text_that_is_being_searched_for.len())
+                                    // .for_each(|_t| rendercontent.highlight[_t] = HighLight::Search);
+                                    
                                     /* loop {
                                         if let Event::Key(event) = 
                                         event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
@@ -1028,3 +1038,95 @@ fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
     //println!("coordinates: {:?}", res_vec);
     res_vec
 }
+
+
+// render the tab
+// #[derive(PartialEq)]
+struct RowContent{
+    row_content: String,
+    render: String,
+    highlight: Vec<HighLight>,
+}
+
+struct EachRowContent{
+    row_content_each:Vec<RowContent>,
+}
+
+impl RowContent{
+    fn new(row_content: String, render: String,highlight:Vec<HighLight>) -> Self{
+        Self {
+            row_content,
+            render,
+            highlight,
+        }
+    }
+}
+impl EachRowContent{
+    fn new() -> Self{
+        Self{
+            row_content_each: Vec::new(),
+        }
+
+    }
+
+    fn render_content(&self, row:&mut RowContent) {
+        let mut ip = 0;
+        let capacity = row
+            .row_content
+            .chars()
+            .fold(0, |acc, next| acc + if next == '\t' { 8 } else { 1 });
+        row.render = String::with_capacity(capacity);
+        row.row_content.chars().for_each(|c| {
+            ip += 1;
+            if c == '\t' {
+                row.render.push(' ');
+                while ip % 8 != 0 {
+                    row.render.push(' ');
+                    ip += 1
+                }
+            } else {
+                row.render.push(c);
+            }
+        });
+    }
+
+    pub fn make_render(&self, t:usize) -> &String{
+        &self.row_content_each[t].render
+    }
+
+    fn edit_row(&self, t:usize) ->&RowContent{
+        &self.row_content_each[t]
+    }
+   
+}
+
+// highlight the search result
+enum HighLight{
+    Normal,
+    Search,
+}
+
+trait ColorContent {
+    fn set_color(&self, highlight_type: &HighLight) -> Color;
+
+}
+
+#[macro_export]
+macro_rules! highlight_struct {
+    (
+        struct $Name:ident;
+    ) => {
+        struct $Name;
+
+        impl ColorContent for $Name {
+            fn set_color(&self, content_type: &HighLight) -> Color {
+                match highlight_type {
+                    HighLight::Normal => Color::Reset,
+                    HighLight::Search => Color::Blue,
+                }
+            }
+              
+        }
+    };
+}
+
