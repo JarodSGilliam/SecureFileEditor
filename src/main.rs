@@ -85,9 +85,12 @@ fn main() {
 
     // render the context
     let mut row_content = screens_stack.first().unwrap().contents.clone();
-    let mut eachrowcontent: EachRowContent = EachRowContent::new();
+
+    let mut temp: EachRowContent = EachRowContent::new();
+    let mut eachrowcontent = temp.change_to_row(&row_content);
     let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new());
     let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
+    let mut editrow = eachrowcontent.get_editor_row_mut(0);
 
     // PROGRAM RUNNING
     loop {
@@ -290,9 +293,10 @@ fn main() {
                                     screen.key_handler.ip_x = res1.unwrap();
                                     screen.key_handler.ip_y = res2.unwrap();
                                     let mut point = 0;
+                                    
                                     // highlight the searching results
-                                    // (_t.._t + the_text_that_is_being_searched_for.len())
-                                    // .for_each(|_t| rendercontent.highlight[_t] = HighLight::Search);
+                                    (_t.._t + the_text_that_is_being_searched_for.len())
+                                    .for_each(|_t| editrow.highlight[_t] = HighLight::Search);
                                     /* loop {
                                         if let Event::Key(event) =
                                         event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
@@ -1077,13 +1081,26 @@ impl EachRowContent {
             }
         });
     }
-
-    pub fn make_render(&self, t: usize) -> &String {
+    fn change_to_row(&self,content:&String) -> Self {
+        let mut row_content_each = Vec::new();
+        content.lines().enumerate().for_each(|(i, line)| {
+            let mut row = RowContent::new(line.into(), String::new(),Vec::new());
+            row_content_each.push(row);
+        });
+        Self{
+            row_content_each, 
+        }
+    }
+    fn make_render(&self, t: usize) -> &String {
         &self.row_content_each[t].render
     }
 
     fn edit_row(&self, t: usize) -> &RowContent {
         &self.row_content_each[t]
+    }
+
+    fn get_editor_row_mut(&mut self, t: usize) -> &mut RowContent {
+        &mut self.row_content_each[t]
     }
 }
 
