@@ -76,6 +76,10 @@ fn main() {
     let mut the_text_that_is_being_searched_for = String::new();
     let mut find_mode: bool = true;
 
+    let mut indices: Vec<usize> = Vec::new();                //list of indices where find text occurs
+    let mut coordinates: Vec<(usize, usize)> = Vec::new();   //list of x,y pairs for the cursor after find
+    let mut point = 0;                                       //used to traverse found instances
+
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
@@ -120,6 +124,29 @@ fn main() {
                     };
                     // break
                 }
+
+                KeyEvent {      //move to next occurrence
+                    code: KeyCode::Char('n'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                } => {
+                    if (find_mode) && coordinates.len() > 0 && (point < coordinates.len() - 1) {
+                        point += 1;
+                        screen.key_handler.ip_x = coordinates[point].0;
+                        screen.key_handler.ip_y = coordinates[point].1;
+                    }
+                },
+
+                KeyEvent {      //move to previous occurrence
+                    code: KeyCode::Char('p'),
+                    modifiers: event::KeyModifiers::CONTROL,
+                } => {
+                    if (find_mode) && coordinates.len() > 0 && (point > 0) {
+                        //println!("\nctrl p OK\n");
+                        point -= 1;
+                        screen.key_handler.ip_x = coordinates[point].0;
+                        screen.key_handler.ip_y = coordinates[point].1;
+                    }
+                },
 
                 KeyEvent {
                     code: KeyCode::Char('d'),
@@ -234,9 +261,9 @@ fn main() {
 
                             //Find & Move Cursor operation below
 
-                            let mut indices = get_indices(&screens_stack.first().unwrap().contents,
+                            indices = get_indices(&screens_stack.first().unwrap().contents,
                                 &the_text_that_is_being_searched_for, number_found);                //list of indices where find text occurs
-                            let mut coordinates = get_xs_and_ys(indices, 
+                            coordinates = get_xs_and_ys(indices, 
                                 &screens_stack.first().unwrap().contents);                           //list of (x, y) pairs for moving the cursor
 
                             let (res1, res2) = find_text(
@@ -248,7 +275,7 @@ fn main() {
                                     screen.key_handler.ip_x = res1.unwrap();
                                     screen.key_handler.ip_y = res2.unwrap();
                                     let mut point = 0;
-                                    loop {
+                                    /* loop {
                                         if let Event::Key(event) = 
                                         event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
                                             match event {
@@ -277,7 +304,7 @@ fn main() {
                                                 _ => break     //all else, break the loop
                                             }
                                         }
-                                    }   //end of loop
+                                    }   //end of loop */
                                 }
                                 None => {
                                     let cursor_location = match screens_stack.first_mut() {
@@ -998,6 +1025,6 @@ fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
     for entry in list {
         res_vec.push(get_newx_newy(contents, entry));   //get the x, y coordinates from an index
     }
-
+    //println!("coordinates: {:?}", res_vec);
     res_vec
 }
