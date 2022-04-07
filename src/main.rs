@@ -214,7 +214,7 @@ fn main() {
                         screens_stack
                             .first_mut()
                             .unwrap()
-                            .set_prompt(String::from(" "));
+                            .set_prompt(String::from(""));
                     }
                     find_mode = false;
                 }
@@ -237,7 +237,7 @@ fn main() {
                         screens_stack
                             .first_mut()
                             .unwrap()
-                            .set_prompt(String::from(" "));
+                            .set_prompt(String::new());
                     }
                     find_mode = false;
                 }
