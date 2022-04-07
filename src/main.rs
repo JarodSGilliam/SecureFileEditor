@@ -148,7 +148,7 @@ fn main() {
                     });
                     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
                     screens_stack.last_mut().unwrap().set_contents(String::from(
-                        FileIO::get_metadata(FileIO::get_file(&pathname).unwrap()),
+                        FileIO::get_metadata(&pathname),
                     ));
                     match screen.refresh_screen(match screens_stack.last() {
                         Some(t) => t,
