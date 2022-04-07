@@ -1,5 +1,5 @@
 use std::io::{stdout, BufRead, Write};
-use std::{cmp, env, fs, io, thread, time};
+use std::{cmp, fs, io, thread, time};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::style::*;
@@ -24,40 +24,8 @@ fn main() {
     // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = TidyUp;
-    // If the user is working on a saved file, it will hold the path to the target file
-    // If the user is working on an unsaved file, it will hold None
-    let opened_file_path: Option<String> = {
-        let args: Vec<String> = env::args().collect();
-        if args.len() >= 2 {
-            let file_path = &args[1];
-            match FileIO::get_file(file_path) {
-                Some(_f) => {
-                    // If the user uses the autosave, it replaces the current save with the auto save
-                    // If the user does not use the autosave, it simply ignores the autosave
-                    if FileIO::check_for_auto_save(file_path) {
-                        println!("Use autosave?");
-                        let mut line = String::new();
-                        std::io::stdin().read_line(&mut line).unwrap();
-                        println!("{}", line.trim());
-                        if line.trim().eq("y") || line.trim().eq("yes") {
-                            FileIO::overwrite_to_file(
-                                file_path,
-                                &FileIO::read_from_file(&FileIO::get_auto_save_path(file_path))
-                                    .unwrap(),
-                            )
-                            .unwrap();
-                            FileIO::delete_auto_save(file_path);
-                        }
-                    }
-                    Some(String::from(file_path))
-                }
-                None => None,
-            }
-        } else {
-            None
-        }
-    };
-
+    let opened_file_path = FileIO::get_file_path(std::env::args());
+    
     // Creates a stack of screens
     let mut screens_stack: Vec<Display> = Vec::new();
     // Creates the screen for interacting with the file
@@ -138,7 +106,7 @@ fn main() {
                         screens_stack
                             .first_mut()
                             .unwrap()
-                            .set_prompt(String::from(" "));
+                            .set_prompt(String::from(""));
                     }
                     find_mode = false;
                     // break
@@ -372,7 +340,7 @@ fn main() {
                                 screens_stack
                                     .first_mut()
                                     .unwrap()
-                                    .set_prompt(String::from(" "));
+                                    .set_prompt(String::from(""));
                             }
                             find_mode = false;
                             continue;
@@ -395,7 +363,7 @@ fn main() {
                                 screens_stack
                                     .first_mut()
                                     .unwrap()
-                                    .set_prompt(String::from(" "));
+                                    .set_prompt(String::from(""));
                             }
                             find_mode = false;
                             continue;
@@ -415,7 +383,7 @@ fn main() {
                         screens_stack
                             .first_mut()
                             .unwrap()
-                            .set_prompt(String::from(" "));
+                            .set_prompt(String::from(""));
                     }
                     find_mode = false;
                 }
@@ -440,7 +408,7 @@ fn main() {
                         screens_stack
                             .first_mut()
                             .unwrap()
-                            .set_prompt(String::from(" "));
+                            .set_prompt(String::from(""));
                     }
                     find_mode = false;
                 }
@@ -465,7 +433,7 @@ fn main() {
                         screens_stack
                             .first_mut()
                             .unwrap()
-                            .set_prompt(String::from(" "));
+                            .set_prompt(String::from(""));
                     }
                     find_mode = false;
                 }
@@ -487,7 +455,7 @@ fn main() {
                             screens_stack
                                 .first_mut()
                                 .unwrap()
-                                .set_prompt(String::from(" "));
+                                .set_prompt(String::from(""));
                             find_mode = false;
                             continue;
                         }
@@ -855,6 +823,7 @@ impl Screen {
         self.key_handler.width_in_row = width;
         queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
         queue!(stdout(), Print(content)).unwrap();
+        // println!("{:?}", &on_screen.prompt);
     }
 
     /*
