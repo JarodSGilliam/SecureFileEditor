@@ -23,7 +23,7 @@ For the first release, the team plans to focus on the base functionality of the 
 * [x] Save File
 
 Crates used:
-    crossterm = "0.23.0"
+   - crossterm = "0.23.0"
 
 ## V2
 (Set to release 4/8/2022)
@@ -33,11 +33,11 @@ For the second release, we plan to focus on more advanced features such as the f
 * [x] Detailed file information
 
 Crates used:
-    crossterm = "0.23.0"
-    regex = "1.5.5"
-    chrono = "0.4.0"
-    unicode-width = "0.1.9"
-    unicode-truncate = "0.2.0"
+   - crossterm = "0.23.0"
+   - regex = "1.5.5"
+   - chrono = "0.4.0"
+   - unicode-width = "0.1.9"
+   - unicode-truncate = "0.2.0"
 
 ## V3
 (Set to release ??/??/2022)
