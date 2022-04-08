@@ -13,6 +13,7 @@ With Docker installed:
 3) upon successful build, use "docker images" to see a list of all built images to ensure yours was built
 4) "docker run -it [image_name]"
 5) "cargo run text.txt" [other file names if applicable]
+6) Press "Ctrl + h" for a list of keyboard commands
 
 ## V1
 (Set to release 3/4/2022)
@@ -21,12 +22,22 @@ For the first release, the team plans to focus on the base functionality of the 
 * [x] Edit a File
 * [x] Save File
 
+Crates used:
+    crossterm = "0.23.0"
+
 ## V2
 (Set to release 4/8/2022)
 For the second release, we plan to focus on more advanced features such as the find/find and replace features, as well as various on-screen information such as displaying the name and type of the open file. 
-* [ ] Find
-* [ ] Find and Replace
-* [ ] On Screen Information
+* [x] Find
+* [x] Find and Replace
+* [x] Detailed file information
+
+Crates used:
+    crossterm = "0.23.0"
+    regex = "1.5.5"
+    chrono = "0.4.0"
+    unicode-width = "0.1.9"
+    unicode-truncate = "0.2.0"
 
 ## V3
 (Set to release ??/??/2022)
