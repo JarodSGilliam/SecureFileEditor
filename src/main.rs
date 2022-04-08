@@ -456,7 +456,7 @@ fn main() {
                             .unwrap()
                             .set_prompt(String::from("Replace P1:\nFind:"));
                     }
-                    if (find_mode) {
+                    if find_mode {
                         screens_stack
                             .first_mut()
                             .unwrap()
@@ -910,15 +910,49 @@ impl Screen {
         for i in 0..self.key_handler.screen_rows {
             let row_in_content = i + self.key_handler.row_offset;
             if row_in_content < self.key_handler.num_of_rows {
-                let len = cmp::min(
-                    bytes[row_in_content].saturating_sub(self.key_handler.column_offset),
-                    self.key_handler.screen_cols,
-                );
-                let start = if len == 0 {
-                    0
+                let mut offset_string = String::from("");
+                let (len, start) = if width[row_in_content] <= self.key_handler.column_offset {
+                    (0, 0)
                 } else {
-                    self.key_handler.column_offset
+                    let (mut st, mut w) = on_screen
+                        .row_contents
+                        .get(row_in_content)
+                        .unwrap()
+                        .unicode_truncate(self.key_handler.column_offset);
+                    while w != self.key_handler.column_offset + offset_string.len() {
+                        offset_string.push_str(" ");
+                        (st, w) = on_screen
+                            .row_contents
+                            .get(row_in_content)
+                            .unwrap()
+                            .unicode_truncate(self.key_handler.column_offset + offset_string.len());
+                    }
+                    if width[row_in_content] - w <= self.key_handler.screen_cols {
+                        (
+                            on_screen.row_contents.get(row_in_content).unwrap().len() - st.len(),
+                            st.len(),
+                        )
+                    } else {
+                        let (s_temp, _) = on_screen
+                            .row_contents
+                            .get(row_in_content)
+                            .unwrap()
+                            .unicode_truncate(
+                                self.key_handler.column_offset + self.key_handler.screen_cols,
+                            );
+                        (s_temp.len() - st.len(), st.len())
+                    }
                 };
+                // let len = cmp::min(
+                //     bytes[row_in_content].saturating_sub(self.key_handler.column_offset),
+                //     self.key_handler.screen_cols,
+                // );
+                // let start = if len == 0 {
+                //     0
+                // } else {
+                //     self.key_handler.column_offset
+                // };
+                content.push_str(&offset_string);
                 if i < self.key_handler.screen_rows - 1 {
                     if start + len == bytes[row_in_content] {
                         content.push_str(
@@ -949,7 +983,6 @@ impl Screen {
 
                 //     content[*a..*a + text.len()].red();
 
-    
                 // }
             }
         }
@@ -1170,10 +1203,9 @@ fn split_with_n(content: &String) -> Vec<String> {
     if last < content.len() {
         result.push(content[last..].to_string());
     }
-    if result.len()==0{
+    if result.len() == 0 {
         return vec![String::from("")];
-    }
-    else{
+    } else {
         return result;
     }
 }
@@ -1245,7 +1277,7 @@ enum HighLight {
 
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
-     // fn color_row(&self, render: &str, highlight: &[HighLight], temp:&mut String) {
+    // fn color_row(&self, render: &str, highlight: &[HighLight], temp:&mut String) {
     //     render.chars().enumerate().for_each(|(i, c)| {
     //         let _ = execute!(stdout(), SetForegroundColor(self.set_color(&highlight[i])));
     //         temp.push(c);
