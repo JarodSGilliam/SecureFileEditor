@@ -151,18 +151,11 @@ fn main() {
                         None => "",
                     });
                     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
-<<<<<<< HEAD
                     screens_stack
                         .last_mut()
                         .unwrap()
                         .set_contents(String::from(FileIO::get_metadata(&pathname)));
                     match screen.refresh_screen(match screens_stack.last_mut() {
-=======
-                    screens_stack.last_mut().unwrap().set_contents(String::from(
-                        FileIO::get_metadata(&pathname), // error here
-                    ));
-                    match screen.refresh_screen(match screens_stack.last() {
->>>>>>> 9164dd265532af95d98daf1d6c4c1c1bee99c83e
                         Some(t) => t,
                         None => break,
                     }) {
