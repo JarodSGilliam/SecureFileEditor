@@ -1,5 +1,5 @@
 use std::io::{stdout, BufRead, Write};
-use std::{cmp, env, fs, io, thread, time};
+use std::{cmp, fs, io, thread, time};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::style::*;
@@ -24,40 +24,7 @@ fn main() {
     // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = TidyUp;
-    // If the user is working on a saved file, it will hold the path to the target file
-    // If the user is working on an unsaved file, it will hold None
-    let opened_file_path: Option<String> = {
-        let args: Vec<String> = env::args().collect();
-        if args.len() >= 2 {
-            let file_path = &args[1];
-            match FileIO::get_file(file_path) {
-                Some(_f) => {
-                    // If the user uses the autosave, it replaces the current save with the auto save
-                    // If the user does not use the autosave, it simply ignores the autosave
-                    if FileIO::check_for_auto_save(file_path) {
-                        println!("Use autosave?");
-                        let mut line = String::new();
-                        std::io::stdin().read_line(&mut line).unwrap();
-                        println!("{}", line.trim());
-                        if line.trim().eq("y") || line.trim().eq("yes") {
-                            FileIO::overwrite_to_file(
-                                file_path,
-                                &FileIO::read_from_file(&FileIO::get_auto_save_path(file_path))
-                                    .unwrap(),
-                            )
-                            .unwrap();
-                            FileIO::delete_auto_save(file_path);
-                        }
-                    }
-                    Some(String::from(file_path))
-                }
-                None => None,
-            }
-        } else {
-            None
-        }
-    };
-
+    let opened_file_path = FileIO::get_file_path(std::env::args());
     // Creates a stack of screens
     let mut screens_stack: Vec<Display> = Vec::new();
     // Creates the screen for interacting with the file
@@ -84,15 +51,15 @@ fn main() {
     let mut point = 0; //used to traverse found instances
 
     // render the context
-    let mut row_content = screens_stack.first().unwrap().contents.clone();
-    let mut eachrowcontent: EachRowContent = EachRowContent::new();
-    let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new());
-    let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
+    // let mut row_content = screens_stack.first().unwrap().contents.clone();
+    // let mut eachrowcontent: EachRowContent = EachRowContent::new();
+    // let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new());
+    // let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
 
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
-        match screen.refresh_screen(match screens_stack.last() {
+        match screen.refresh_screen(match screens_stack.last_mut() {
             Some(t) => t,
             None => break,
         }) {
@@ -131,6 +98,13 @@ fn main() {
                         Ok(_) => {}
                         Err(e) => eprint!("Failed to save because of error {}", e),
                     };
+                    if (find_mode) {
+                        screens_stack
+                            .first_mut()
+                            .unwrap()
+                            .set_prompt(String::from(""));
+                    }
+                    find_mode = false;
                     // break
                 }
 
@@ -168,10 +142,11 @@ fn main() {
                         None => "",
                     });
                     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
-                    screens_stack.last_mut().unwrap().set_contents(String::from(
-                        FileIO::get_metadata(FileIO::get_file(&pathname).unwrap()),
-                    ));
-                    match screen.refresh_screen(match screens_stack.last() {
+                    screens_stack
+                        .last_mut()
+                        .unwrap()
+                        .set_contents(String::from(FileIO::get_metadata(&pathname)));
+                    match screen.refresh_screen(match screens_stack.last_mut() {
                         Some(t) => t,
                         None => break,
                     }) {
@@ -190,7 +165,9 @@ fn main() {
                         | KeyCode::Home
                         | KeyCode::End),
                     modifiers: event::KeyModifiers::NONE,
-                } => screen.key_handler.move_ip(direction),
+                } => screen
+                    .key_handler
+                    .move_ip(direction, screens_stack.last().unwrap()),
 
                 // Events that change the text
                 KeyEvent {
@@ -253,12 +230,12 @@ fn main() {
                                 .count();
                             if number_found > 0 {
                                 screens_stack.first_mut().unwrap().set_prompt(format!(
-                                    "Found {} matches: Ctrl + P for previous, Ctrl + N for next",
+                                    "Found {} matches: Ctrl + P for previous, Ctrl + N for next, ESC for exit find mode",
                                     number_found
                                 ));
                             } else {
                                 screens_stack.first_mut().unwrap().set_prompt(format!(
-                                    "Found {} matches: Try searching for something else",
+                                    "Found {} matches: Try searching for something else, ESC for exit find mode",
                                     number_found
                                 ));
                             }
@@ -360,6 +337,13 @@ fn main() {
                                 .unwrap()
                                 .set_prompt(String::from("Replace P2:\nReplace:"));
                             println!("{}", the_text_that_is_being_searched_for);
+                            if (find_mode) {
+                                screens_stack
+                                    .first_mut()
+                                    .unwrap()
+                                    .set_prompt(String::from(""));
+                            }
+                            find_mode = false;
                             continue;
                         }
                         DisplayType::ReplaceP2 => {
@@ -376,6 +360,13 @@ fn main() {
                             the_text_that_is_being_searched_for = String::from("");
                             // for
                             println!("{}", to_replace);
+                            if (find_mode) {
+                                screens_stack
+                                    .first_mut()
+                                    .unwrap()
+                                    .set_prompt(String::from(""));
+                            }
+                            find_mode = false;
                             continue;
                         }
                         _ => {}
@@ -389,6 +380,13 @@ fn main() {
                     if screens_stack.last().unwrap().display_type != DisplayType::Help {
                         add_help_screen(&mut screen, &mut screens_stack);
                     }
+                    if (find_mode) {
+                        screens_stack
+                            .first_mut()
+                            .unwrap()
+                            .set_prompt(String::from(""));
+                    }
+                    find_mode = false;
                 }
 
                 // Triggers find screen
@@ -424,6 +422,13 @@ fn main() {
                             }
                         */
                     }
+                    if (find_mode) {
+                        screens_stack
+                            .first_mut()
+                            .unwrap()
+                            .set_prompt(String::from(""));
+                    }
+                    find_mode = false;
                 }
 
                 // Triggers find screen
@@ -442,6 +447,13 @@ fn main() {
                             .unwrap()
                             .set_prompt(String::from("Replace P1:\nFind:"));
                     }
+                    if (find_mode) {
+                        screens_stack
+                            .first_mut()
+                            .unwrap()
+                            .set_prompt(String::from(""));
+                    }
+                    find_mode = false;
                 }
 
                 KeyEvent {
@@ -565,38 +577,74 @@ impl KeyHandler {
     }
 
     //move the insertion point based on user's keypress
-    fn move_ip(&mut self, operation: KeyCode) {
+    fn move_ip(&mut self, operation: KeyCode, on_screen: &Display) {
         match operation {
             KeyCode::Up => {
                 if self.ip_y > 0 {
                     self.ip_y -= 1;
-                    self.ip_x = cmp::min(self.ip_x, self.width_in_row.get(self.ip_y).unwrap() - 1);
+                    self.ip_x = cmp::min(self.ip_x, *self.width_in_row.get(self.ip_y).unwrap());
+                    (_, self.ip_x) = on_screen
+                        .row_contents
+                        .get(self.ip_y)
+                        .unwrap()
+                        .unicode_truncate(self.ip_x);
                 }
             }
             KeyCode::Down => {
                 if self.ip_y < self.num_of_rows - 1 {
                     self.ip_y += 1;
-                    self.ip_x = cmp::min(self.ip_x, self.width_in_row.get(self.ip_y).unwrap() - 1);
+                    self.ip_x = cmp::min(self.ip_x, *self.width_in_row.get(self.ip_y).unwrap());
+                    (_, self.ip_x) = on_screen
+                        .row_contents
+                        .get(self.ip_y)
+                        .unwrap()
+                        .unicode_truncate(self.ip_x);
                 }
             }
             KeyCode::Left => {
                 if self.ip_x > 0 {
                     self.ip_x -= 1;
+                    let (_, mut w) = on_screen
+                        .row_contents
+                        .get(self.ip_y)
+                        .unwrap()
+                        .unicode_truncate(self.ip_x);
+                    while w != self.ip_x {
+                        self.ip_x -= 1;
+                        (_, w) = on_screen
+                            .row_contents
+                            .get(self.ip_y)
+                            .unwrap()
+                            .unicode_truncate(self.ip_x);
+                    }
                 } else if self.ip_y > 0 {
                     self.ip_y -= 1;
-                    self.ip_x = self.width_in_row.get(self.ip_y).unwrap() - 1;
+                    self.ip_x = *self.width_in_row.get(self.ip_y).unwrap();
                 }
             }
             KeyCode::Right => {
-                if self.ip_x < self.width_in_row.get(self.ip_y).unwrap() - 1 {
+                if self.ip_x < *self.width_in_row.get(self.ip_y).unwrap() {
                     self.ip_x += 1;
+                    let (_, mut w) = on_screen
+                        .row_contents
+                        .get(self.ip_y)
+                        .unwrap()
+                        .unicode_truncate(self.ip_x);
+                    while w != self.ip_x {
+                        self.ip_x += 1;
+                        (_, w) = on_screen
+                            .row_contents
+                            .get(self.ip_y)
+                            .unwrap()
+                            .unicode_truncate(self.ip_x);
+                    }
                 } else if self.ip_y < self.num_of_rows - 1 {
                     self.ip_x = 0;
                     self.ip_y += 1;
                 }
                 // else is for default, the limit is set to be the screen size for further adjustment
             }
-            KeyCode::End => self.ip_x = self.width_in_row.get(self.ip_y).unwrap() - 1,
+            KeyCode::End => self.ip_x = *self.width_in_row.get(self.ip_y).unwrap(),
             KeyCode::Home => self.ip_x = 0,
             _ => {} //more code needed
         }
@@ -607,18 +655,30 @@ impl KeyHandler {
             KeyCode::Char(c) => {
                 on_screen
                     .contents
-                    .insert(self.get_current_location_in_string(), c);
-                self.bytes_in_row[self.ip_y] += 1;
+                    .insert(self.get_current_location_in_string(on_screen), c);
+                on_screen.row_contents = split_with_n(&on_screen.contents);
+                self.bytes_in_row[self.ip_y] += c.to_string().len();
                 self.ip_x += 1;
-                //println!("{:?}",self.rows);
-                //println!("bleh: {}\r", c);
+                let (_, mut w) = on_screen
+                    .row_contents
+                    .get(self.ip_y)
+                    .unwrap()
+                    .unicode_truncate(self.ip_x);
+                while w != self.ip_x {
+                    self.ip_x += 1;
+                    (_, w) = on_screen
+                        .row_contents
+                        .get(self.ip_y)
+                        .unwrap()
+                        .unicode_truncate(self.ip_x);
+                }
             }
 
             KeyCode::Tab => {
                 //println!("tabbing");
                 on_screen
                     .contents
-                    .insert_str(self.get_current_location_in_string(), "    ");
+                    .insert_str(self.get_current_location_in_string(on_screen), "    ");
                 self.bytes_in_row[self.ip_y] += 4;
                 self.ip_x += 4;
             }
@@ -632,20 +692,42 @@ impl KeyHandler {
                     if self.ip_y == 0 {
                         //do nothing since insertion point is at origin (top-left)
                     } else {
-                        let _deleted: char = on_screen
+                        on_screen
                             .contents
-                            .remove(self.get_current_location_in_string() - 1);
-                        self.ip_x = self.bytes_in_row[self.ip_y - 1] - 1;
-                        self.bytes_in_row[self.ip_y - 1] += self.bytes_in_row[self.ip_y] - 1;
+                            .remove(self.get_current_location_in_string(on_screen) - 1);
+                        on_screen.row_contents = split_with_n(&on_screen.contents);
+                        self.ip_x = self.width_in_row[self.ip_y - 1];
+                        self.bytes_in_row[self.ip_y - 1] =
+                            on_screen.row_contents[self.ip_y - 1].len();
+                        self.width_in_row[self.ip_y - 1] =
+                            on_screen.row_contents[self.ip_y - 1].width();
                         self.bytes_in_row.remove(self.ip_y);
                         self.ip_y -= 1;
                     }
                 } else {
-                    on_screen
+                    let a = on_screen.contents[..self.get_current_location_in_string(on_screen)]
+                        .to_string()
+                        .pop()
+                        .unwrap()
+                        .len_utf8();
+                    let deleted = on_screen
                         .contents
-                        .remove(self.get_current_location_in_string() - 1);
-                    self.bytes_in_row[self.ip_y] -= 1;
+                        .remove(self.get_current_location_in_string(on_screen) - a);
+                    self.bytes_in_row[self.ip_y] -= deleted.len_utf8();
                     self.ip_x -= 1;
+                    let (_, mut w) = on_screen
+                        .row_contents
+                        .get(self.ip_y)
+                        .unwrap()
+                        .unicode_truncate(self.ip_x);
+                    while w != self.ip_x {
+                        self.ip_x -= 1;
+                        (_, w) = on_screen
+                            .row_contents
+                            .get(self.ip_y)
+                            .unwrap()
+                            .unicode_truncate(self.ip_x);
+                    }
                 }
                 //println!("bleh: back\r");
             }
@@ -658,7 +740,7 @@ impl KeyHandler {
                         //println!("{}", self.get_current_location_in_string());
                         on_screen
                             .contents
-                            .remove(self.get_current_location_in_string());
+                            .remove(self.get_current_location_in_string(on_screen));
                         self.bytes_in_row[self.ip_y] += self.bytes_in_row[self.ip_y + 1] - 1;
                         self.bytes_in_row.remove(self.ip_y + 1);
                         self.num_of_rows -= 1;
@@ -666,7 +748,7 @@ impl KeyHandler {
                 } else {
                     on_screen
                         .contents
-                        .remove(self.get_current_location_in_string());
+                        .remove(self.get_current_location_in_string(on_screen));
                     self.bytes_in_row[self.ip_y] -= 1;
                 }
             }
@@ -674,7 +756,7 @@ impl KeyHandler {
             KeyCode::Enter => {
                 on_screen
                     .contents
-                    .insert(self.get_current_location_in_string(), '\n');
+                    .insert(self.get_current_location_in_string(on_screen), '\n');
                 self.bytes_in_row
                     .insert(self.ip_y + 1, self.bytes_in_row[self.ip_y] - self.ip_x);
                 self.bytes_in_row[self.ip_y] = self.ip_x + 1;
@@ -687,12 +769,17 @@ impl KeyHandler {
 
     //Backspace and moving forward when typing
 
-    fn get_current_location_in_string(&mut self) -> usize {
+    fn get_current_location_in_string(&mut self, on_screen: &Display) -> usize {
         let mut x = 0;
         for i in 0..self.ip_y {
             x += self.bytes_in_row[i];
         }
-        x += self.ip_x;
+        let (s, _) = on_screen
+            .row_contents
+            .get(self.ip_y)
+            .unwrap()
+            .unicode_truncate(self.ip_x);
+        x += s.replace('\n', "").len();
         //println!("{}",x);
         x
     }
@@ -713,6 +800,7 @@ enum DisplayType {
 struct Display {
     display_type: DisplayType,
     contents: String,
+    row_contents: Vec<String>,
     prompt: String,
     active_cursor_location: (usize, usize),
 }
@@ -721,6 +809,7 @@ impl Display {
         Display {
             display_type,
             contents: String::new(),
+            row_contents: Vec::new(),
             prompt: String::new(),
             active_cursor_location: (0, 0),
         }
@@ -730,6 +819,7 @@ impl Display {
         Display {
             display_type,
             contents,
+            row_contents: Vec::new(),
             prompt: String::new(),
             active_cursor_location: (0, 0),
         }
@@ -797,21 +887,22 @@ impl Screen {
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
     //print the char, and get the char of each row, get the total row number
-    fn draw_content(&mut self, on_screen: &Display) {
-        let calculator: Vec<&str> = on_screen.contents.split("\n").collect();
-        self.key_handler.num_of_rows = calculator.len();
+    fn draw_content(&mut self, on_screen: &mut Display) {
+        on_screen.row_contents = split_with_n(&on_screen.contents);
+        // let calculator: Vec<&str> = on_screen.contents.split("\n").collect();
+        self.key_handler.num_of_rows = on_screen.row_contents.len();
         let mut width: Vec<usize> = Vec::new();
         let mut bytes: Vec<usize> = Vec::new();
-        for i in &calculator {
-            bytes.push(i.len() + 1);
-            width.push(UnicodeWidthStr::width(*i) + 1);
+        for i in &on_screen.row_contents {
+            bytes.push(i.len());
+            width.push(i.width());
         }
         let mut content = String::new();
         for i in 0..self.key_handler.screen_rows {
             let row_in_content = i + self.key_handler.row_offset;
             if row_in_content < self.key_handler.num_of_rows {
                 let len = cmp::min(
-                    (bytes[row_in_content] - 1).saturating_sub(self.key_handler.column_offset),
+                    bytes[row_in_content].saturating_sub(self.key_handler.column_offset),
                     self.key_handler.screen_cols,
                 );
                 let start = if len == 0 {
@@ -819,9 +910,29 @@ impl Screen {
                 } else {
                     self.key_handler.column_offset
                 };
-                content.push_str(&calculator[row_in_content].to_string()[start..start + len]);
                 if i < self.key_handler.screen_rows - 1 {
-                    content.push_str("\r\n");
+                    if start + len == bytes[row_in_content] {
+                        content.push_str(
+                            &on_screen.row_contents[row_in_content].to_string()[start..start + len]
+                                .replace('\n', "\r\n"),
+                        );
+                    } else {
+                        content.push_str(
+                            &on_screen.row_contents[row_in_content].to_string()[start..start + len],
+                        );
+                        content.push_str("\r\n");
+                    };
+                } else {
+                    if start + len == bytes[row_in_content] {
+                        content.push_str(
+                            &on_screen.row_contents[row_in_content].to_string()[start..start + len]
+                                .replace('\n', ""),
+                        );
+                    } else {
+                        content.push_str(
+                            &on_screen.row_contents[row_in_content].to_string()[start..start + len],
+                        );
+                    };
                 }
             }
         }
@@ -829,6 +940,7 @@ impl Screen {
         self.key_handler.width_in_row = width;
         queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
         queue!(stdout(), Print(content)).unwrap();
+        // println!("{:?}", &on_screen.prompt);
     }
 
     /*
@@ -838,7 +950,7 @@ impl Screen {
     }
     */
 
-    fn refresh_screen(&mut self, on_screen: &Display) -> crossterm::Result<()> {
+    fn refresh_screen(&mut self, on_screen: &mut Display) -> crossterm::Result<()> {
         self.key_handler.scroll();
         let mut stdout = stdout();
         queue!(
@@ -1027,6 +1139,26 @@ fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
     }
     //println!("coordinates: {:?}", res_vec);
     res_vec
+}
+
+fn split_with_n(content: &String) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut last = 0;
+    for (index, _) in content.match_indices('\n') {
+        // if last != index {
+        result.push(content[last..index + 1].to_string());
+        // }
+        last = index + 1;
+    }
+    if last < content.len() {
+        result.push(content[last..].to_string());
+    }
+    if result.len()==0{
+        return vec![String::from("")];
+    }
+    else{
+        return result;
+    }
 }
 
 // render the tab

@@ -100,7 +100,8 @@ impl FileIO {
         }
     }
 
-    pub fn get_metadata(file : File) -> String {
+    pub fn get_metadata(pathname : &String) -> String {
+        let file = FileIO::get_file(&pathname).unwrap();
         let metadata = match file.metadata() {
             Err(e) => panic!("Could not get metadata from file: {}", e),
             Ok(f) => f,
@@ -112,7 +113,26 @@ impl FileIO {
         let created : String = format!("{}", temp.format("%T on %m/%d/%Y"));
         temp = metadata.modified().unwrap().into();
         let modified : String = format!("{}", temp.format("%T on %m/%d/%Y"));
-        let output : String = format!("Last accessed: {}\nCreated:       {}\nLast Modified: {}\nLength:        {} characters\nPermissions:   {}", accessed, created, modified, metadata.len(), if metadata.permissions().readonly() {"Read only"} else {"Writeable"});
+                
+        let mut file_text = String::new();
+        let mut file_type = String::new();
+        for a in pathname.chars() {
+            if a == '.' {
+                file_text += file_type.as_str();
+                file_type = String::new();
+            }
+            file_type += format!("{}", a).as_str();
+            // print!("{} ", a);
+        }
+
+        println!("{}", file_text);
+        println!("{}", file_type);
+
+        let output : String = format!(
+            "File name: {}\nFile type: {}\nLast accessed: {}\nCreated:       {}\nLast Modified: {}\nLength:        {} characters\nPermissions:   {}",
+            // pathname.chars()[0..pathname.chars().find('.')], 
+            file_text, file_type, accessed, created, modified, metadata.len(), if metadata.permissions().readonly() {"Read only"} else {"Writeable"}
+        );
         output
     }
 
@@ -129,6 +149,40 @@ impl FileIO {
                 }
             },
             None => String::new()
+        }
+    }
+
+    // If the user is working on a saved file, it will hold the path to the target file
+    // If the user is working on an unsaved file, it will hold None
+    pub fn get_file_path(args : std::env::Args) -> Option<String> {
+        let inputs : Vec<String> = args.collect();
+        if inputs.len() >= 2 {
+            let file_path = &inputs[1];
+            match FileIO::get_file(file_path) {
+                Some(_f) => {
+                    // If the user uses the autosave, it replaces the current save with the auto save
+                    // If the user does not use the autosave, it simply ignores the autosave
+                    if FileIO::check_for_auto_save(file_path) {
+                        println!("Use autosave?");
+                        let mut line = String::new();
+                        std::io::stdin().read_line(&mut line).unwrap();
+                        println!("{}", line.trim());
+                        if line.trim().eq("y") || line.trim().eq("yes") {
+                            FileIO::overwrite_to_file(
+                                file_path,
+                                &FileIO::read_from_file(&FileIO::get_auto_save_path(file_path))
+                                    .unwrap(),
+                            )
+                            .unwrap();
+                            FileIO::delete_auto_save(file_path);
+                        }
+                    }
+                    Some(String::from(file_path))
+                }
+                None => None,
+            }
+        } else {
+            None
         }
     }
 }
