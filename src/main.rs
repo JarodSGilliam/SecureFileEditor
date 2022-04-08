@@ -85,12 +85,9 @@ fn main() {
 
     // render the context
     let mut row_content = screens_stack.first().unwrap().contents.clone();
-
-    let mut temp: EachRowContent = EachRowContent::new();
-    let mut eachrowcontent = temp.change_to_row(&row_content);
-    let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new()); //vec change here
+    let mut eachrowcontent: EachRowContent = EachRowContent::new();
+    let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new());
     let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
-    let mut editrow = eachrowcontent.get_editor_row_mut(0);
 
     // PROGRAM RUNNING
     loop {
@@ -134,23 +131,15 @@ fn main() {
                         Ok(_) => {}
                         Err(e) => eprint!("Failed to save because of error {}", e),
                     };
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(" "));
-                    }
-                    find_mode = false;
                     // break
                 }
 
                 KeyEvent {
                     //move to next occurrence
-                    code: KeyCode::Right,
+                    code: KeyCode::Char('n'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     if (find_mode) && coordinates.len() > 0 && (point < coordinates.len() - 1) {
-                        //println!("\n ctrl n OK \n");
                         point += 1;
                         screen.key_handler.ip_x = coordinates[point].0;
                         screen.key_handler.ip_y = coordinates[point].1;
@@ -159,11 +148,11 @@ fn main() {
 
                 KeyEvent {
                     //move to previous occurrence
-                    code: KeyCode::Left,
+                    code: KeyCode::Char('p'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     if (find_mode) && coordinates.len() > 0 && (point > 0) {
-                        //println!("\nctrl b OK\n");
+                        //println!("\nctrl p OK\n");
                         point -= 1;
                         screen.key_handler.ip_x = coordinates[point].0;
                         screen.key_handler.ip_y = coordinates[point].1;
@@ -189,13 +178,6 @@ fn main() {
                         Ok(_) => {}
                         Err(e) => eprint!("{}", e),
                     };
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(""));
-                    }
-                    find_mode = false;
                 }
 
                 // Events that move the cursor
@@ -208,16 +190,7 @@ fn main() {
                         | KeyCode::Home
                         | KeyCode::End),
                     modifiers: event::KeyModifiers::NONE,
-                } => {
-                    screen.key_handler.move_ip(direction);
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(""));
-                    }
-                    find_mode = false;
-                }
+                } => screen.key_handler.move_ip(direction),
 
                 // Events that change the text
                 KeyEvent {
@@ -225,22 +198,13 @@ fn main() {
                         input
                         @ (KeyCode::Char(..) | KeyCode::Tab | KeyCode::Backspace | KeyCode::Delete),
                     modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
-                } => { 
-                    screen.key_handler.insertion(
-                        input,
-                        match screens_stack.last_mut() {
-                            Some(t) => t,
-                            None => break,
-                        }
-                    );
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(""));
-                    }
-                    find_mode = false;
-                }
+                } => screen.key_handler.insertion(
+                    input,
+                    match screens_stack.last_mut() {
+                        Some(t) => t,
+                        None => break,
+                    },
+                ),
 
                 KeyEvent {
                     code: KeyCode::Enter,
@@ -276,10 +240,10 @@ fn main() {
                                 Some(t) => String::from(t.contents.as_str()),
                                 None => String::new(),
                             };
-                            /* print!(
+                            print!(
                                 "\nThe text the user was looking for: {}",
                                 the_text_that_is_being_searched_for
-                            ); */
+                            );
                             find_mode = true;
                             let number_found = screens_stack
                                 .first()
@@ -289,7 +253,7 @@ fn main() {
                                 .count();
                             if number_found > 0 {
                                 screens_stack.first_mut().unwrap().set_prompt(format!(
-                                    "Found {} matches: Ctrl + Left for previous, Ctrl + Right for next",
+                                    "Found {} matches: Ctrl + P for previous, Ctrl + N for next",
                                     number_found
                                 ));
                             } else {
@@ -325,12 +289,40 @@ fn main() {
                                     //if res1 is not a None, then at least one occurrence was found
                                     screen.key_handler.ip_x = res1.unwrap();
                                     screen.key_handler.ip_y = res2.unwrap();
-                                    //let mut point = 0;
-                                    
+                                    let mut point = 0;
                                     // highlight the searching results
-                                    /* println!("search text: {}", the_text_that_is_being_searched_for);
-                                    (_t.._t + the_text_that_is_being_searched_for.len())
-                                    .for_each(|_t| editrow.highlight[_t] = HighLight::Search); */
+                                    // (_t.._t + the_text_that_is_being_searched_for.len())
+                                    // .for_each(|_t| rendercontent.highlight[_t] = HighLight::Search);
+                                    /* loop {
+                                        if let Event::Key(event) =
+                                        event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
+                                            match event {
+                                                KeyEvent {      //user pressed Ctrl+n, advance to next instance
+                                                    code: KeyCode::Char('n'),
+                                                    modifiers: event::KeyModifiers::CONTROL,
+                                                } => {
+                                                    if point < coordinates.len() - 1 {
+                                                        point += 1;
+                                                        screen.key_handler.ip_x = coordinates[point].0;
+                                                        screen.key_handler.ip_y = coordinates[point].1;
+                                                    }
+                                                },
+
+                                                KeyEvent {      //user presed Ctrl+p, revert to previous instance
+                                                    code: KeyCode::Char('p'),
+                                                    modifiers: event::KeyModifiers::CONTROL,
+                                                } => {
+                                                    if point > 0 {
+                                                        point -= 1;
+                                                        screen.key_handler.ip_x = coordinates[point].0;
+                                                        screen.key_handler.ip_y = coordinates[point].1;
+                                                    }
+                                                },
+
+                                                _ => break     //all else, break the loop
+                                            }
+                                        }
+                                    }   //end of loop */
                                 }
                                 None => {
                                     let cursor_location = match screens_stack.first_mut() {
@@ -368,13 +360,6 @@ fn main() {
                                 .unwrap()
                                 .set_prompt(String::from("Replace P2:\nReplace:"));
                             println!("{}", the_text_that_is_being_searched_for);
-                            if (find_mode) {
-                                screens_stack
-                                    .first_mut()
-                                    .unwrap()
-                                    .set_prompt(String::from(" "));
-                            }
-                            find_mode = false;
                             continue;
                         }
                         DisplayType::ReplaceP2 => {
@@ -391,13 +376,6 @@ fn main() {
                             the_text_that_is_being_searched_for = String::from("");
                             // for
                             println!("{}", to_replace);
-                            if (find_mode) {
-                                screens_stack
-                                    .first_mut()
-                                    .unwrap()
-                                    .set_prompt(String::from(" "));
-                            }
-                            find_mode = false;
                             continue;
                         }
                         _ => {}
@@ -411,13 +389,6 @@ fn main() {
                     if screens_stack.last().unwrap().display_type != DisplayType::Help {
                         add_help_screen(&mut screen, &mut screens_stack);
                     }
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(" "));
-                    }
-                    find_mode = false;
                 }
 
                 // Triggers find screen
@@ -425,6 +396,8 @@ fn main() {
                     code: KeyCode::Char('f'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
+                    // Hunter's version
+                    // test_alt_screen();
                     // Jarod's Version
 
                     if screens_stack.len() == 1 {
@@ -435,14 +408,22 @@ fn main() {
                             .unwrap()
                             .set_prompt(String::from("Text to find:"));
 
+                        /*
+                            At this point we want to get the user's input for the text they'd like to find.
+                            Using io::stdin doesn't seem to work, so we may need to use something else here.
+                        */
+
+                        /*if s.len() > 0 {
+                            screens_stack.pop();
+                            let cursor_location = match screens_stack.first_mut() {
+                                Some(t) => t.active_cursor_location,
+                                None => {break},
+                            };
+                            screen.key_handler.ip_x = cursor_location.0;
+                            screen.key_handler.ip_y = cursor_location.1;
+                            }
+                        */
                     }
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(" "));
-                    }
-                    find_mode = false;
                 }
 
                 // Triggers find screen
@@ -461,13 +442,6 @@ fn main() {
                             .unwrap()
                             .set_prompt(String::from("Replace P1:\nFind:"));
                     }
-                    if (find_mode) {
-                        screens_stack
-                            .first_mut()
-                            .unwrap()
-                            .set_prompt(String::from(" "));
-                    }
-                    find_mode = false;
                 }
 
                 KeyEvent {
@@ -487,7 +461,7 @@ fn main() {
                             screens_stack
                                 .first_mut()
                                 .unwrap()
-                                .set_prompt(String::from(" "));
+                                .set_prompt(String::from(""));
                             find_mode = false;
                             continue;
                         }
@@ -903,6 +877,28 @@ impl Drop for TidyUp {
     }
 }
 
+//this funciton is meant to test out the AlternateScreen feature
+//you can access this by pressing 'Esc' during execution
+//the idea here is to allow the user to enter their find/replace text here,
+// then move back to the main screen to 'find' it
+fn test_alt_screen() -> CResult<()> {
+    execute!(stdout(), EnterAlternateScreen)?; //move to alternate screen
+    terminal::enable_raw_mode()?; //enable raw mode in alternate screen
+    let stdin = io::stdin();
+    let mut handle = stdin.lock();
+    let mut buffer = String::new();
+
+    println!("Text to find: ");
+    handle.read_line(&mut buffer)?;
+    thread::sleep(time::Duration::from_millis(1500));
+
+    /* queue!(stdout(), Print("alt screen".to_string()));
+    let mut s = String::new();
+    io::stdin().read_line(&mut s).expect("failed to read input");
+    thread::sleep(time::Duration::from_millis(1500)); */
+    execute!(stdout(), LeaveAlternateScreen) //move back to main screen
+}
+
 /*
     This is a test function to see if the Regex crate is really necessary.
     It uses the String::find function to see if the user's search text is
@@ -1081,26 +1077,13 @@ impl EachRowContent {
             }
         });
     }
-    fn change_to_row(&self,content:&String) -> Self {
-        let mut row_content_each = Vec::new();
-        content.lines().enumerate().for_each(|(i, line)| {
-            let mut row = RowContent::new(line.into(), String::new(),Vec::new());
-            row_content_each.push(row);
-        });
-        Self{
-            row_content_each, 
-        }
-    }
-    fn make_render(&self, t: usize) -> &String {
+
+    pub fn make_render(&self, t: usize) -> &String {
         &self.row_content_each[t].render
     }
 
     fn edit_row(&self, t: usize) -> &RowContent {
         &self.row_content_each[t]
-    }
-
-    fn get_editor_row_mut(&mut self, t: usize) -> &mut RowContent {
-        &mut self.row_content_each[t]
     }
 }
 
