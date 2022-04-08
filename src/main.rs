@@ -592,22 +592,22 @@ impl KeyHandler {
                 if self.ip_y > 0 {
                     self.ip_y -= 1;
                     self.ip_x = cmp::min(self.ip_x, *self.width_in_row.get(self.ip_y).unwrap());
-                    (_, self.ip_x) = on_screen
+                    self.ip_x = on_screen
                         .row_contents
                         .get(self.ip_y)
                         .unwrap()
-                        .unicode_truncate(self.ip_x);
+                        .unicode_truncate(self.ip_x).1;
                 }
             }
             KeyCode::Down => {
                 if self.ip_y < self.num_of_rows - 1 {
                     self.ip_y += 1;
                     self.ip_x = cmp::min(self.ip_x, *self.width_in_row.get(self.ip_y).unwrap());
-                    (_, self.ip_x) = on_screen
+                    self.ip_x = on_screen
                         .row_contents
                         .get(self.ip_y)
                         .unwrap()
-                        .unicode_truncate(self.ip_x);
+                        .unicode_truncate(self.ip_x).1;
                 }
             }
             KeyCode::Left => {
@@ -620,11 +620,11 @@ impl KeyHandler {
                         .unicode_truncate(self.ip_x);
                     while w != self.ip_x {
                         self.ip_x -= 1;
-                        (_, w) = on_screen
+                        w = on_screen
                             .row_contents
                             .get(self.ip_y)
                             .unwrap()
-                            .unicode_truncate(self.ip_x);
+                            .unicode_truncate(self.ip_x).1;
                     }
                 } else if self.ip_y > 0 {
                     self.ip_y -= 1;
@@ -641,11 +641,11 @@ impl KeyHandler {
                         .unicode_truncate(self.ip_x);
                     while w != self.ip_x {
                         self.ip_x += 1;
-                        (_, w) = on_screen
+                        w = on_screen
                             .row_contents
                             .get(self.ip_y)
                             .unwrap()
-                            .unicode_truncate(self.ip_x);
+                            .unicode_truncate(self.ip_x).1;
                     }
                 } else if self.ip_y < self.num_of_rows - 1 {
                     self.ip_x = 0;
@@ -675,11 +675,11 @@ impl KeyHandler {
                     .unicode_truncate(self.ip_x);
                 while w != self.ip_x {
                     self.ip_x += 1;
-                    (_, w) = on_screen
+                    w = on_screen
                         .row_contents
                         .get(self.ip_y)
                         .unwrap()
-                        .unicode_truncate(self.ip_x);
+                        .unicode_truncate(self.ip_x).1;
                 }
             }
 
@@ -731,11 +731,11 @@ impl KeyHandler {
                         .unicode_truncate(self.ip_x);
                     while w != self.ip_x {
                         self.ip_x -= 1;
-                        (_, w) = on_screen
+                        w = on_screen
                             .row_contents
                             .get(self.ip_y)
                             .unwrap()
-                            .unicode_truncate(self.ip_x);
+                            .unicode_truncate(self.ip_x).1;
                     }
                 }
                 //println!("bleh: back\r");
@@ -921,11 +921,16 @@ impl Screen {
                         .unicode_truncate(self.key_handler.column_offset);
                     while w != self.key_handler.column_offset + offset_string.len() {
                         offset_string.push_str(" ");
-                        (st, w) = on_screen
+                        st = on_screen
                             .row_contents
                             .get(row_in_content)
                             .unwrap()
-                            .unicode_truncate(self.key_handler.column_offset + offset_string.len());
+                            .unicode_truncate(self.key_handler.column_offset + offset_string.len()).0;
+                        w = on_screen
+                            .row_contents
+                            .get(row_in_content)
+                            .unwrap()
+                            .unicode_truncate(self.key_handler.column_offset + offset_string.len()).1;
                     }
                     if width[row_in_content] - w <= self.key_handler.screen_cols {
                         (
