@@ -119,7 +119,7 @@ fn main() {
 
                 KeyEvent {
                     //move to next occurrence
-                    code: KeyCode::Char('n'),
+                    code: KeyCode::Right,
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     if (find_mode) && coordinates.len() > 0 && (point < coordinates.len() - 1) {
@@ -131,7 +131,7 @@ fn main() {
 
                 KeyEvent {
                     //move to previous occurrence
-                    code: KeyCode::Char('p'),
+                    code: KeyCode::Left,
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     if (find_mode) && coordinates.len() > 0 && (point > 0) {
@@ -239,7 +239,7 @@ fn main() {
                                 .count();
                             if number_found > 0 {
                                 screens_stack.first_mut().unwrap().set_prompt(format!(
-                                    "Found {} matches: Ctrl + P for previous, Ctrl + N for next, ESC for exit find mode",
+                                    "Found {} matches: Ctrl + Left for previous, Ctrl + Right for next, ESC for exit find mode",
                                     number_found
                                 ));
                             } else {
