@@ -2,8 +2,8 @@
 #### Created by Jarod Gillliam, Xin He, Hunter McGarity, and Chenqian Xu
 A good file editor makes a significant difference in terms of usability, portability, and productivity for many software developers. While large-scale editor projects, such as Microsoft Visual Studio Code, provide a plethora of additional features that some developers require, they can become bloated with an abundance of plugins and confusing project management. It is the goal of this team to develop a simple file/text editor focused on usability and convenience in the Rust language.
 
-# Docker Instructions (Release 1)
-For the first release, we are simply aiming for a bash shell on container startup. The user will need to manually cd into the 'src' directory from here and then
+# Docker Instructions (Release 2)
+For the second release, we are simply aiming for a bash shell on container startup. The user will need to manually cd into the 'src' directory from here and then
 run the program with "cargo run [filename]".
 
 With Docker installed:
