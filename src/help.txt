@@ -1,4 +1,8 @@
 Ctrl + h = help page
-Ctrl + f = find
+Ctrl + f = find (will place cursor at first instance)
+Ctrl + left = moves to previous "find" result
+Ctrl + right = moves to next "find" result
+Ctrl + r = replace
 Ctrl + w = close file
+Ctrl + d = detailed file information
 [Esc] to leave this screen
