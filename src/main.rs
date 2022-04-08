@@ -596,7 +596,8 @@ impl KeyHandler {
                         .row_contents
                         .get(self.ip_y)
                         .unwrap()
-                        .unicode_truncate(self.ip_x).1;
+                        .unicode_truncate(self.ip_x)
+                        .1;
                 }
             }
             KeyCode::Down => {
@@ -607,7 +608,8 @@ impl KeyHandler {
                         .row_contents
                         .get(self.ip_y)
                         .unwrap()
-                        .unicode_truncate(self.ip_x).1;
+                        .unicode_truncate(self.ip_x)
+                        .1;
                 }
             }
             KeyCode::Left => {
@@ -624,7 +626,8 @@ impl KeyHandler {
                             .row_contents
                             .get(self.ip_y)
                             .unwrap()
-                            .unicode_truncate(self.ip_x).1;
+                            .unicode_truncate(self.ip_x)
+                            .1;
                     }
                 } else if self.ip_y > 0 {
                     self.ip_y -= 1;
@@ -645,7 +648,8 @@ impl KeyHandler {
                             .row_contents
                             .get(self.ip_y)
                             .unwrap()
-                            .unicode_truncate(self.ip_x).1;
+                            .unicode_truncate(self.ip_x)
+                            .1;
                     }
                 } else if self.ip_y < self.num_of_rows - 1 {
                     self.ip_x = 0;
@@ -679,7 +683,8 @@ impl KeyHandler {
                         .row_contents
                         .get(self.ip_y)
                         .unwrap()
-                        .unicode_truncate(self.ip_x).1;
+                        .unicode_truncate(self.ip_x)
+                        .1;
                 }
             }
 
@@ -735,7 +740,8 @@ impl KeyHandler {
                             .row_contents
                             .get(self.ip_y)
                             .unwrap()
-                            .unicode_truncate(self.ip_x).1;
+                            .unicode_truncate(self.ip_x)
+                            .1;
                     }
                 }
                 //println!("bleh: back\r");
@@ -921,16 +927,13 @@ impl Screen {
                         .unicode_truncate(self.key_handler.column_offset);
                     while w != self.key_handler.column_offset + offset_string.len() {
                         offset_string.push_str(" ");
-                        st = on_screen
+                        let temp_for_unicode = on_screen
                             .row_contents
                             .get(row_in_content)
                             .unwrap()
-                            .unicode_truncate(self.key_handler.column_offset + offset_string.len()).0;
-                        w = on_screen
-                            .row_contents
-                            .get(row_in_content)
-                            .unwrap()
-                            .unicode_truncate(self.key_handler.column_offset + offset_string.len()).1;
+                            .unicode_truncate(self.key_handler.column_offset + offset_string.len());
+                        st = temp_for_unicode.0;
+                        w = temp_for_unicode.1;
                     }
                     if width[row_in_content] - w <= self.key_handler.screen_cols {
                         (
@@ -1126,15 +1129,17 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
         } else if (line.len() + total) > position {
             //if position somewhere in this line
             //println!("final len: {}", line.len());
-            let mut i = 1;
+            let mut i = 0;
 
-            for _c in line.chars() {
+            for c in line.chars() {
                 //println!("iterating on {}", c);
                 if (total + i) == position {
-                    x_val = (i) as usize;
+                    // let s=disp.row_contents.get(y_val).unwrap();
+                    let t=line.unicode_truncate(line[..i].width());
+                    x_val = t.1;
                     break 'outer;
                 }
-                i += 1;
+                i += c.len_utf8();
             }
         }
     }
@@ -1151,20 +1156,22 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
 fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
     let mut new_str = contents.clone();
     let mut res_vec = Vec::new();
+    let mut c:char='\0';
     while res_vec.len() < count {
         match new_str.find(text) {
             Some(t) => {
                 //println!("new_str: {}", new_str);
                 if res_vec.len() > 0 {
                     let temp = res_vec[res_vec.len() - 1];
-                    res_vec.push(t + temp + 1);
+                    res_vec.push(t + temp + c.len_utf8());
                     //println!("pushing_ {}", t + temp + 1);
                 } else {
                     res_vec.push(t);
                     //println!("pushing: {}", t);
                 }
                 //res_vec.push(t);
-                new_str = new_str.split_at(t + 1).1.to_string();
+                new_str = new_str.split_at(t).1.to_string();
+                c=new_str.remove(0);
                 //println!("new_str_: {}", new_str);
             }
             None => {}
