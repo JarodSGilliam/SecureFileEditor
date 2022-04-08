@@ -921,16 +921,13 @@ impl Screen {
                         .unicode_truncate(self.key_handler.column_offset);
                     while w != self.key_handler.column_offset + offset_string.len() {
                         offset_string.push_str(" ");
-                        st = on_screen
+                        let unicode_temp = on_screen
                             .row_contents
                             .get(row_in_content)
                             .unwrap()
-                            .unicode_truncate(self.key_handler.column_offset + offset_string.len()).0;
-                        w = on_screen
-                            .row_contents
-                            .get(row_in_content)
-                            .unwrap()
-                            .unicode_truncate(self.key_handler.column_offset + offset_string.len()).1;
+                            .unicode_truncate(self.key_handler.column_offset + offset_string.len());
+                        st = unicode_temp.0;
+                        w = unicode_temp.1;
                     }
                     if width[row_in_content] - w <= self.key_handler.screen_cols {
                         (
