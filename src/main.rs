@@ -71,6 +71,15 @@ fn main() {
             Err(e) => eprint!("{}", e),
         };
 
+        // new display function which can match the word it founded and color it
+        // match screen.refresh_screen(match screens_stack.last() {
+        //     Some(t) => t,
+        //     None => break,
+        // },& indices,& the_text_that_is_being_searched_for) {
+        //     Ok(_) => {}
+        //     Err(e) => eprint!("{}", e),
+        // };
+
         // Watches for key commands
         if let Event::Key(event) =
             event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE)))
@@ -148,7 +157,7 @@ fn main() {
                     });
                     Display::new_on_stack(&mut screen, &mut screens_stack, DisplayType::Help);
                     screens_stack.last_mut().unwrap().set_contents(String::from(
-                        FileIO::get_metadata(&pathname),
+                        FileIO::get_metadata(&pathname), // error here
                     ));
                     match screen.refresh_screen(match screens_stack.last() {
                         Some(t) => t,
@@ -817,6 +826,14 @@ impl Screen {
                 if i < self.key_handler.screen_rows - 1 {
                     content.push_str("\r\n");
                 }
+                // use the position of search words to match display content and color it
+                // for a in indices.iter(){
+                //     queue!(stdout(),Print(content[1..2].red())).unwrap();
+
+                //     content[*a..*a + text.len()].red();
+
+    
+                // }
             }
         }
         self.key_handler.bytes_in_row = bytes;
@@ -1074,6 +1091,7 @@ impl EachRowContent {
 }
 
 // highlight the search result
+// syntax highlight function // not used in version2
 enum HighLight {
     Normal,
     Search,
@@ -1081,6 +1099,13 @@ enum HighLight {
 
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
+     // fn color_row(&self, render: &str, highlight: &[HighLight], temp:&mut String) {
+    //     render.chars().enumerate().for_each(|(i, c)| {
+    //         let _ = execute!(stdout(), SetForegroundColor(self.set_color(&highlight[i])));
+    //         temp.push(c);
+    //         let _ = queue!(stdout(),Print(temp),ResetColor);
+    //     });
+    // }
 }
 
 #[macro_export]
