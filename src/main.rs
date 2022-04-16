@@ -50,8 +50,7 @@ fn main() {
         FileIO::get_file_contents(&opened_file_path),
     ));
 
-    let mut the_text_that_is_being_searched_for = String::new();
-    let mut find_mode: bool = true;
+    // let mut the_text_that_is_being_searched_for = String::new();
 
     let mut indices: Vec<usize> = Vec::new(); //list of indices where find text occurs
     let mut coordinates: Vec<(usize, usize)> = Vec::new(); //list of x,y pairs for the cursor after find
@@ -66,7 +65,7 @@ fn main() {
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
-        match screen.refresh_screen() {
+        match screen.refresh_screen() { //the_text_that_is_being_searched_for.as_str()
             Ok(_) => {}
             Err(e) => eprint!("{}", e),
         };
@@ -105,10 +104,10 @@ fn main() {
                         Ok(_) => {}
                         Err(e) => eprint!("Failed to save because of error {}", e),
                     };
-                    if find_mode {
+                    if screen.find_mode() {
                         screen.active_mut().set_prompt(String::from(""));
                     }
-                    find_mode = false;
+                    screen.mode = Mode::Normal;
                     // break
                 }
 
@@ -117,7 +116,7 @@ fn main() {
                     code: KeyCode::Right,
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    if (find_mode) && coordinates.len() > 0 && (point < coordinates.len() - 1) {
+                    if (screen.find_mode()) && coordinates.len() > 0 && (point < coordinates.len() - 1) {
                         point += 1;
                         screen.key_handler.ip.x = coordinates[point].0;
                         screen.key_handler.ip.y = coordinates[point].1;
@@ -129,7 +128,7 @@ fn main() {
                     code: KeyCode::Left,
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    if (find_mode) && coordinates.len() > 0 && (point > 0) {
+                    if (screen.find_mode()) && coordinates.len() > 0 && (point > 0) {
                         //println!("\nctrl p OK\n");
                         point -= 1;
                         screen.key_handler.ip.x = coordinates[point].0;
@@ -174,7 +173,7 @@ fn main() {
                 } => {
                     match screen.active().display_type {
                         PageType::Text => {
-                            if the_text_that_is_being_searched_for != "" {
+                            if screen.find_mode() {
                                 //fix here
                                 /* screens_stack.first_mut().unwrap().contents =
                                  screens_stack.first_mut().unwrap().contents.replace(
@@ -185,29 +184,33 @@ fn main() {
                                     .as_str(),
                                     the_text_that_is_being_searched_for.as_str(),
                                 ); */
-                                the_text_that_is_being_searched_for = String::new();
+                                screen.mode = Mode::Normal;
+                                // the_text_that_is_being_searched_for = ;
                                 continue;
                             }
                             screen.insertion(KeyCode::Enter);
                             continue;
                         }
                         PageType::Find => {
-                            the_text_that_is_being_searched_for = screen.active().contents.clone();
+                            screen.mode = Mode::Find(screen.active().contents.clone());
                             print!(
                                 "\nThe text the user was looking for: {}",
-                                the_text_that_is_being_searched_for
+                                screen.search_text().unwrap()
                             );
-                            find_mode = true;
-                            let number_found = screen.text_page().contents.matches(&the_text_that_is_being_searched_for).count();
-                            if number_found > 0 {
-                                screen.active_mut().set_prompt(format!(
-                                    "Found {} matches: Ctrl + Left for previous, Ctrl + Right for next, ESC for exit find mode",
+                            // screen.mode = Mode::Find(the_text_that_is_being_searched_for);
+                            let number_found = screen.text_page().contents.matches(&screen.search_text().unwrap()).count();
+                            if number_found > 1 {
+                                screen.text_page_mut().set_prompt(format!(
+                                    "Found {} matches: (Ctrl + Left for previous, Ctrl + Right for next, ESC to exit find mode)",
                                     number_found
                                 ));
+                            } else if number_found == 1 {
+                                screen.text_page_mut().set_prompt(format!(
+                                    "Found 1 match: (ESC to exit find mode)",
+                                ));
                             } else {
-                                screen.active_mut().set_prompt(format!(
-                                    "Found {} matches: Try searching for something else, ESC for exit find mode",
-                                    number_found
+                                screen.text_page_mut().set_prompt(format!(
+                                    "Found no matches: (Try searching for something else, ESC to exit find mode)",
                                 ));
                             }
                             /* screens_stack.first_mut().unwrap().contents =    //fix here
@@ -222,7 +225,7 @@ fn main() {
 
                             indices = get_indices(
                                 &screen.text_page().contents,
-                                &the_text_that_is_being_searched_for,
+                                &screen.search_text().unwrap(),
                                 number_found,
                             ); //list of indices where find text occurs
                             coordinates =
@@ -230,7 +233,7 @@ fn main() {
 
                             let (res1, res2) = find_text(
                                 screen.text_page(),
-                                &the_text_that_is_being_searched_for,
+                                &screen.search_text().unwrap(),
                             );
                             match res1 {
                                 Some(_t) => {
@@ -289,19 +292,19 @@ fn main() {
                             //continue;
                         }
                         PageType::ReplaceP1 => {
-                            the_text_that_is_being_searched_for = match screen.page_stack.last() {
+                            screen.mode = Mode::Replace(match screen.page_stack.last() {
                                 Some(t) => String::from(t.contents.as_str()),
                                 None => String::new(),
-                            };
+                            });
                             // screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str());
                             screen.pop();
                             screen.add(PageType::ReplaceP2);
                             screen.active_mut().set_prompt(String::from("Replace P2:\nReplace:"));
-                            println!("{}", the_text_that_is_being_searched_for);
-                            if find_mode {
+                            println!("{}", screen.search_text().unwrap());
+                            if screen.find_mode() {
                                 screen.text_page_mut().set_prompt(String::from(""));
                             }
-                            find_mode = false;
+                            // screen.mode = Mode::Replace();
                             continue;
                         }
                         PageType::ReplaceP2 => {
@@ -309,19 +312,26 @@ fn main() {
                                 Some(t) => String::from(t.contents.as_str()),
                                 None => String::new(),
                             };
+                            // println!("{}", screen.mode.to_str());
+                            let temp007 = match &screen.mode {
+                                Mode::Normal => break,
+                                Mode::Find(_) => break,
+                                Mode::Replace(t) => t
+                            }.clone();
                             screen.text_page_mut().contents =
                                 screen.text_page_mut().contents.replace(
-                                    the_text_that_is_being_searched_for.as_str(),
+                                    temp007.as_str(),
                                     to_replace.as_str(),
                                 );
                             screen.pop();
-                            the_text_that_is_being_searched_for = String::from("");
+                            screen.text_page_mut().set_prompt(String::from("Replaced here:"));
+                            screen.mode = Mode::Replace(to_replace.clone());
                             // for
                             println!("{}", to_replace);
-                            if find_mode {
+                            if screen.find_mode() {
                                 screen.text_page_mut().set_prompt(String::from(""));
                             }
-                            find_mode = false;
+                            // screen.mode = Mode::Normal;
                             continue;
                         }
                         _ => {}
@@ -335,10 +345,10 @@ fn main() {
                     if screen.active().display_type != PageType::Info {
                         screen.add_help_page();
                     }
-                    if find_mode {
+                    if screen.find_mode() {
                         screen.text_page_mut().set_prompt(String::from(""));
                     }
-                    find_mode = false;
+                    screen.mode = Mode::Normal;
                 }
 
                 // Triggers find screen
@@ -371,10 +381,10 @@ fn main() {
                             }
                         */
                     }
-                    if find_mode {
+                    if screen.find_mode() {
                         screen.text_page_mut().set_prompt(String::from(""));
                     }
-                    find_mode = false;
+                    screen.mode = Mode::Normal;
                 }
 
                 // Triggers find screen
@@ -386,10 +396,10 @@ fn main() {
                         screen.add(PageType::ReplaceP1);
                         screen.active_mut().set_prompt(String::from("Replace P1:\nFind:"));
                     }
-                    if find_mode {
+                    if screen.find_mode() {
                         screen.text_page_mut().set_prompt(String::from(""));
                     }
-                    find_mode = false;
+                    screen.mode = Mode::Normal;
                 }
 
                 KeyEvent {
@@ -402,9 +412,9 @@ fn main() {
                         // screen.key_handler.ip_x = cursor_location.0;
                         // screen.key_handler.ip_y = cursor_location.1;
                     } else {
-                        if find_mode {
+                        if screen.find_mode() || screen.mode.to_str() == "replace" {
                             screen.text_page_mut().set_prompt(String::from(""));
-                            find_mode = false;
+                            screen.mode = Mode::Normal;
                             continue;
                         }
                         if screen.active().display_type != PageType::Info {

@@ -11,6 +11,29 @@ use crate::key_handler::*;
 use crate::page::*;
 
 
+use crossterm::{
+    ExecutableCommand, QueueableCommand,
+    style::{self, Stylize}, Result
+};
+
+
+#[derive(PartialEq)]
+pub enum Mode {
+    Normal,
+    Find(String),
+    Replace(String),
+}
+
+impl Mode {
+    pub fn to_str(&self) -> &str {
+        match self {
+            Mode::Normal => "normal",
+            Mode::Find(_) => "find",
+            Mode::Replace(_) => "replace",
+        }
+    }
+}
+
 /*
 Screen show the content to the screen
 */
@@ -18,6 +41,7 @@ Screen show the content to the screen
 pub struct Screen {
     pub page_stack: Vec<Page>,
     pub key_handler: KeyHandler,
+    pub mode: Mode,
 }
 impl Screen {
     pub fn new() -> Self {
@@ -27,6 +51,19 @@ impl Screen {
         Self {
             page_stack:  Vec::new(),
             key_handler: KeyHandler::new(screen_size),
+            mode: Mode::Normal,
+        }
+    }
+
+    pub fn find_mode(&self) -> bool {
+        self.mode.to_str() == "find"
+    }
+
+    pub fn search_text(&self) -> Option<String> {
+        match &self.mode {
+            Mode::Normal => None,
+            Mode::Find(t) => Some(t.clone()),
+            Mode::Replace(t) => Some(t.clone()),
         }
     }
 
@@ -203,8 +240,52 @@ impl Screen {
         }
         self.key_handler.bytes_in_row = bytes;
         self.key_handler.width_in_row = width;
-        queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
-        queue!(stdout(), Print(content)).unwrap();
+        let temp01 = match &self.mode {
+            Mode::Normal => {
+                queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
+                queue!(stdout(), Print(content)).unwrap();
+                return;
+            },
+            Mode::Find(t) => {t},
+            Mode::Replace(t) => {t},
+        };
+        let target_term = temp01.as_str();
+
+        let mut stdout = stdout();
+        let color = "";
+
+
+        let content_copy = content.clone();
+        // let target_term : &str = "test";
+        // match stdout.execute(terminal::Clear(terminal::ClearType::All)) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // };
+
+        match stdout.queue(cursor::MoveTo(0,0)) {
+            Ok(_) => {},
+            Err(_) => {},
+        };
+        stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset()));
+        
+        let mut spot = 0;
+        // stdout.queue(cursor::MoveTo(0,0));
+        let tempvect : Vec<_> = content_copy.match_indices(target_term).collect();
+        for i in tempvect {
+            let temp = String::from(&content_copy[spot..i.0]);
+            match color {
+                "black" => {stdout.queue(style::PrintStyledContent(temp.black()))},
+                _ => {stdout.queue(style::PrintStyledContent(temp.reset()))},
+            };
+            spot = i.0+target_term.len();
+            let temp = String::from(&content_copy[i.0..spot]);
+            stdout.queue(style::PrintStyledContent(temp.on_red()));
+        }
+        println!("{}", &content_copy[spot..]);
+        match stdout.flush() {
+            Ok(_) => {},
+            Err(_) => {},
+        };
         // println!("{:?}", &on_screen.prompt);
     }
 
