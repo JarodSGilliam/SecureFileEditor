@@ -14,7 +14,7 @@ COPY Cargo.toml .
 COPY Cargo.lock .
 COPY text.txt .
 
-# RUN cd src
+WORKDIR /home/src
 RUN cargo build
 # RUN cargo run test.txt
 # RUN cargo run text.txt
