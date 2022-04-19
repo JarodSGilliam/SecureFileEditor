@@ -12,6 +12,7 @@ With Docker installed:
     ex: "docker build -t file_editor ."
 3) upon successful build, use "docker images" to see a list of all built images to ensure yours was built
 4) "docker run -it [image_name]"
+   The docker container should launch in the /home/src folder; if it doesn't, cd into the src folder
 5) "cargo run text.txt" [other file names if applicable]
 6) Press "Ctrl + h" for a list of keyboard commands
 
