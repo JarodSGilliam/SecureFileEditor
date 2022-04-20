@@ -11,6 +11,8 @@ use crossterm::{cursor, event, execute, queue, style, terminal};
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
 
+use syntect::parsing::SyntaxSet;
+
 pub mod page;
 pub mod insertion_point;
 pub mod key_handler;
@@ -39,8 +41,13 @@ fn main() {
         }, 
         None => {},
     }
-
-    println!("extension: {}", extension);
+    //println!("extension: {}", extension);
+    //let mut builder = SyntaxSetBuilder::new();
+    let s_set = SyntaxSet::load_defaults_newlines();
+    let syntax = s_set.find_syntax_by_extension(extension.as_str())
+        .unwrap_or_else(|| s_set.find_syntax_plain_text()); //load plaintext syntax if extension does not yield another valid syntax
+    println!("{}", syntax.name);
+    
     
     // Setup
     match crossterm::terminal::enable_raw_mode() {
