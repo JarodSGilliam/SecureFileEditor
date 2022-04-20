@@ -32,6 +32,15 @@ fn main() {
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = TidyUp;
     let opened_file_path = FileIO::get_file_path(std::env::args());
+    let mut extension: String = String::from("");
+    match opened_file_path.clone() {
+        Some(string) => {
+            extension = get_extension(string);
+        }, 
+        None => {},
+    }
+
+    println!("extension: {}", extension);
     
     // Setup
     match crossterm::terminal::enable_raw_mode() {
@@ -698,6 +707,21 @@ trait ColorContent {
     //         let _ = queue!(stdout(),Print(temp),ResetColor);
     //     });
     // }
+}
+
+/*
+    For the purposes of syntax highlighting with the syntect crate, this function
+    is meant to get the command-line argument (file) extension. We need this extension to
+    build the correct syntax for that file type.
+*/
+
+fn get_extension(full_name: String) -> String {
+    let tokens: Vec<&str> = full_name.split(".").collect();
+    if tokens.len() != 2 {
+        return "".to_string();
+    } else {
+        return tokens[1].to_string();
+    }
 }
 
 #[macro_export]
