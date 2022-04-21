@@ -702,11 +702,13 @@ impl EachRowContent {
 // syntax highlight function // not used in version2
 enum HighLight {
     Normal,
+    Number,
     Search,
 }
 
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
+    fn match_type(&self, page: & Page) -> HighLight;
     // fn color_row(&self, render: &str, highlight: &[HighLight], temp:&mut String) {
     //     render.chars().enumerate().for_each(|(i, c)| {
     //         let _ = execute!(stdout(), SetForegroundColor(self.set_color(&highlight[i])));
@@ -738,13 +740,29 @@ macro_rules! highlight_struct {
     ) => {
         struct $Name;
 
+
         impl ColorContent for $Name {
-            fn set_color(&self, content_type: &HighLight) -> Color {
+            fn set_color(&self, highlight_type: &HighLight) -> Color {
                 match highlight_type {
                     HighLight::Normal => Color::Reset,
                     HighLight::Search => Color::Blue,
                 }
             }
+
+            fn match_type(&self, page: &Page ) -> HighLight {
+                let row = page.row_contents;
+                let chars = row.chars();
+                for c in chars {
+                    if c.is_digit(10){
+                        HighLight::Number;
+
+                    } else {
+                        HighLight::Normal;
+                    }
+                }
+
+            }
         }
+
     };
 }
