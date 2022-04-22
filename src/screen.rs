@@ -156,7 +156,12 @@ impl Screen {
         execute!(stdout(), terminal::Clear(ClearType::All))?;
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
+    
     pub fn render(&mut self) {
+        if self.active().display_type.overwrites() {
+            self.draw_content(self.page_stack.len()-1);
+            return;
+        }
         for i in 0..self.page_stack.len() {
             self.draw_content(i);
         }
@@ -266,20 +271,16 @@ impl Screen {
         };
         let mut stdout = stdout();
         let mut y = 0;
+        let mut x = 0;
         if !on_screen.display_type.overwrites() {
-            y = self.key_handler.screen_rows-2-on_screen.prompt.matches("\n").count();
+            self.print_overlay(i, content);
+            return;
         }
-        match stdout.queue(cursor::MoveTo(0, y as u16)) {
+        if !on_screen.display_type.overwrites() {
+        }
+        match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
             Ok(_) => {},
             Err(_) => {},
-        };
-        if !on_screen.display_type.overwrites() {
-            for _i in 0..self.key_handler.screen_cols {
-                match stdout.queue(style::PrintStyledContent("-".reset())) {
-                    Ok(_) => {},
-                    Err(_) => {},
-                }
-            }
         }
         if on_screen.display_type == PageType::Text {
             for _i in 0..(self.key_handler.screen_cols-on_screen.prompt.len())/2 {
@@ -310,6 +311,18 @@ impl Screen {
         color.coloring(text);
         // queue!(stdout(), Print(content)).unwrap();
         // return;
+        if !on_screen.display_type.overwrites() {
+            match stdout.queue(cursor::MoveTo(x as u16, (y+3) as u16)) {
+                Ok(_) => {},
+                Err(_) => {},
+            }
+            for _i in 0..self.key_handler.screen_cols * 4/6 {
+                match stdout.queue(style::PrintStyledContent("-".reset())) {
+                    Ok(_) => {},
+                    Err(_) => {},
+                }
+            }
+        }
         match stdout.flush() {
             Ok(_) => {},
             Err(_) => {},
@@ -363,6 +376,79 @@ impl Screen {
     }
     */
 
+    pub fn print_overlay(&mut self, i : usize, content : String) {
+        let mut stdout = stdout();
+        // let on_screen = self.page_stack.get_mut(i).unwrap();
+        let y = self.key_handler.screen_rows/2;
+        let x = self.key_handler.screen_cols/6;
+        
+        let temp : Vec<String> = self.page_stack[i].prompt.clone().trim().split("\n").map(|x|x.to_owned()).collect();
+        Screen::print_at_times(&mut stdout, x, y-1-temp.len(), "-", self.key_handler.screen_cols * 4/6);
+        // match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // }
+        // for _i in 0..self.key_handler.screen_cols * 4/6 {
+        //     match stdout.queue(style::PrintStyledContent("-".reset())) {
+        //         Ok(_) => {},
+        //         Err(_) => {},
+        //     }
+        // }
+        for i in 0..temp.len() {
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols, x, y-(temp.len()-i), temp[i].to_owned());
+        }
+        Screen::create_line(&mut stdout, self.key_handler.screen_cols, x, y, content);
+        // Screen::clean_line(&mut stdout, self.key_handler.screen_cols, x, y);
+        // Screen::print_at(&mut stdout, x, y, "| ");
+        // Screen::print_at_times(&mut stdout, x+2, y, " ", self.key_handler.screen_cols*4/6-4);
+        // match stdout.queue(style::PrintStyledContent(" |".reset())) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // }
+        // Screen::print_at(&mut stdout, x+2, y, content.as_str());
+        // match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // }
+        // match stdout.queue(style::PrintStyledContent("| ".reset())) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // }
+        Screen::print_at_times(&mut stdout, x, y+1, "-", self.key_handler.screen_cols * 4/6);
+    }
+
+    pub fn create_line(stdout : &mut std::io::Stdout, width : usize, x : usize, y : usize, text : String) {
+        Screen::clean_line(stdout, width, x, y);
+        Screen::print_at(stdout, x+2, y, &text);
+    }
+
+    pub fn clean_line(stdout : &mut std::io::Stdout, width : usize, x : usize, y : usize) {
+        Screen::print_at(stdout, x, y, "| ");
+        Screen::print_at_times(stdout, x+2, y, " ", width*4/6-4);
+        match stdout.queue(style::PrintStyledContent(" |".reset())) {
+            Ok(_) => {},
+            Err(_) => {},
+        }
+    }
+
+    pub fn print_at(stdout : &mut std::io::Stdout, x : usize, y : usize, text : &str) {
+        Screen::print_at_times(stdout, x, y, text, 1);
+    }
+    
+
+    pub fn print_at_times(stdout : &mut std::io::Stdout, x : usize, y : usize, text : &str, times : usize) {
+        match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
+            Ok(_) => {},
+            Err(_) => {},
+        }
+        for _i in 0..times {
+            match stdout.queue(style::PrintStyledContent(text.reset())) {
+                Ok(_) => {},
+                Err(_) => {},
+            }
+        }
+    }
+    
     pub fn refresh_screen(&mut self) -> crossterm::Result<()> {
         self.key_handler.scroll();
         let mut stdout = stdout();
@@ -373,19 +459,24 @@ impl Screen {
             cursor::MoveTo(0, 0)
         )?;
         self.render();
-        let ip_x = self.key_handler.ip.x - self.key_handler.column_offset;
+        let mut ip_x = self.key_handler.ip.x - self.key_handler.column_offset;
         let mut ip_y = self.key_handler.ip.y - self.key_handler.row_offset;
         if self.active().prompt != "" {
             ip_y += self.active().prompt.matches("\n").count();
         }
         if !self.active().display_type.overwrites() {
-            ip_y = self.key_handler.screen_rows-1;
+            queue!(
+                stdout,
+                cursor::MoveTo((self.key_handler.screen_cols/6 + 2 + ip_x) as u16, (self.key_handler.screen_rows/2) as u16),
+                cursor::Show
+            )?;
+        } else {
+            queue!(
+                stdout,
+                cursor::MoveTo(ip_x as u16, ip_y as u16),
+                cursor::Show
+            )?;
         }
-        queue!(
-            stdout,
-            cursor::MoveTo(ip_x as u16, ip_y as u16),
-            cursor::Show
-        )?;
         stdout.flush()
     }
 
