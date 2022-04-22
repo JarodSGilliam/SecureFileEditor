@@ -1,12 +1,12 @@
 js
 red
-stuff
+print
 green
 and
 blue
-yay
+(,)
 yellow
-things
+",'
 
 python
 red
@@ -28,12 +28,12 @@ this, if
 yellow
 
 
-ruby
+java
 red
-
+",', print, println, main
 green
-
+void, String
 blue
-
+public, static
 yellow
-
+System, out

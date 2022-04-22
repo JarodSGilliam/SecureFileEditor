@@ -144,9 +144,16 @@ impl Screen {
         execute!(stdout(), terminal::Clear(ClearType::All))?;
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
+    pub fn render(&mut self) {
+        for i in 0..self.page_stack.len() {
+            self.draw_content(i);
+        }
+    }
+    
+    
     //print the char, and get the char of each row, get the total row number
-    pub fn draw_content(&mut self) {
-        let on_screen = self.page_stack.last_mut().unwrap();
+    pub fn draw_content(&mut self, i : usize) {
+        let on_screen = self.page_stack.get_mut(i).unwrap();
         on_screen.row_contents = split_with_n(&on_screen.contents);
         // let calculator: Vec<&str> = on_screen.contents.split("\n").collect();
         self.key_handler.num_of_rows = on_screen.row_contents.len();
@@ -242,12 +249,37 @@ impl Screen {
         self.key_handler.width_in_row = width;
         let temp01 = match &self.mode {
             Mode::Normal => {
-                queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
-                let color = ColorWord::new(content.clone());
+                let mut stdout = stdout();
+                let mut y = 0;
+                if !on_screen.display_type.overwrites() {
+                    y = self.key_handler.screen_rows-2-on_screen.prompt.matches("\n").count();
+                }
+                match stdout.queue(cursor::MoveTo(0, y as u16)) {
+                    Ok(_) => {},
+                    Err(_) => {},
+                };
+                if !on_screen.display_type.overwrites() {
+                    for _i in 0..self.key_handler.screen_cols {
+                        match stdout.queue(style::PrintStyledContent("-".reset())) {
+                            Ok(_) => {},
+                            Err(_) => {},
+                        }
+                    }
+                }
+                match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset())) {
+                    Ok(_) => {},
+                    Err(_) => {},
+                }
+                let mut color = ColorWord::new(content.clone());
                 let text: &str = &content.clone()[..];
-                return color.coloring(text);                    
+                color.coloring(text);
                 // queue!(stdout(), Print(content)).unwrap();
                 // return;
+                match stdout.flush() {
+                    Ok(_) => {},
+                    Err(_) => {},
+                };
+                return; 
             },
             Mode::Find(t) => {t},
             Mode::Replace(t) => {t},
@@ -308,11 +340,14 @@ impl Screen {
             terminal::Clear(ClearType::All),
             cursor::MoveTo(0, 0)
         )?;
-        self.draw_content();
+        self.render();
         let ip_x = self.key_handler.ip.x - self.key_handler.column_offset;
         let mut ip_y = self.key_handler.ip.y - self.key_handler.row_offset;
         if self.active().prompt != "" {
             ip_y += self.active().prompt.matches("\n").count();
+        }
+        if !self.active().display_type.overwrites() {
+            ip_y = self.key_handler.screen_rows-1;
         }
         queue!(
             stdout,
@@ -330,30 +365,75 @@ impl Screen {
 // Potential additions to screen
 // pub pub fn active_type(&self) -> PageType {
 pub struct ColorWord{
-    word: String,
+    // word: String,
+    disable: bool,
     red: Vec<String>,
     yellow: Vec<String>,
     blue: Vec<String>,
     green: Vec<String>,
     other: Vec<String>,
+    in_text_2: bool,
+    in_text_1: bool,
+    base_colors: Vec<Color>,
+    parenthesis: usize,
+    brackets: usize,
 }
 impl ColorWord{
-    pub fn new(word: String) -> Self{
+    pub fn new(file_type: String) -> Self {
+        let color_details = FileIO::get_highlights(file_type).unwrap();
         Self{
-            word: word,
-            red: vec!["=".to_string()],
-            yellow: Vec::new(),
-            blue: vec!["#".to_string()],
-            green: vec!["This".to_string()],
+            // word: word,
+            disable: false,
+            red: color_details.0,
+            yellow: color_details.3,
+            blue: color_details.2,
+            green: color_details.1,
             other: Vec::new(),
-                
+            in_text_2: false,
+            in_text_1: false,
+            base_colors: vec![Color::Yellow, Color::Red, Color::Black, Color::Green, Color::Blue, Color::Magenta],
+            parenthesis: 0,
+            brackets: 0,
         }
     }
     
-    pub fn get_color(&self, word: &str) -> Color{
+    pub fn get_color(&mut self, word: &str) -> Color{
+        if (word == "\"") & !self.in_text_1 {
+            self.in_text_2 = !self.in_text_2;
+            return Color::Magenta;
+        }
+        if (word == "\'") & !self.in_text_2 {
+            self.in_text_1 = !self.in_text_1;
+            return Color::Magenta;
+        }
+        if self.in_text_2 || self.in_text_1 {
+            return Color::Magenta;
+        }
+        if word == "(" {
+            let output = self.base_colors[self.parenthesis%self.base_colors.len()];
+            self.parenthesis += 1;
+            return output;
+        }
+        if word == ")" {
+            if self.parenthesis > 0 {
+                self.parenthesis -= 1;
+            }
+            return self.base_colors[self.parenthesis%self.base_colors.len()];
+        }
+        if word == "{" {
+            let output = self.base_colors[self.brackets%self.base_colors.len()];
+            self.brackets += 1;
+            return output;
+        }
+        if word == "}" {
+            if self.brackets > 0 {
+                self.brackets -= 1;
+            }
+            return self.base_colors[self.brackets%self.base_colors.len()];
+        }
         for w in &self.red {
             if word == w {
-                return Color::Magenta;
+                return Color::Red;
             }
         }
         for w in &self.yellow {
@@ -367,6 +447,7 @@ impl ColorWord{
                 return Color::Blue;                
             }
         }
+        // println!("{:?}", self.green);
         for w in &self.green {
             if word == w {
                 return Color::DarkGreen;                
@@ -376,14 +457,14 @@ impl ColorWord{
     }
     
     pub fn get_background_color(&self, c : &str) -> Color {
-        if c == self.word {
-            Color::Red
-        } else {
+        // if c == self.word {
+        //     Color::Red
+        // } else {
             Color::Reset
-        }
+        // }
     }
     
-    pub fn coloring(&self, text: &str) {
+    pub fn coloring(&mut self, text: &str) {
         let mut stdout = stdout();
         // match stdout.queue(cursor::MoveTo(0,0)) {
         //     Ok(_) => {},
@@ -395,30 +476,31 @@ impl ColorWord{
         // };
         let line:Vec<&str> = text.split("\r\n").collect();
     
-        for l in line{
-            l.split(" ").enumerate().for_each(|(_i, word)| {
+        for i in 0..line.len() {
+            for word in split_up(line[i].to_owned()) {
                 // The actual printing part \/
                 match stdout.queue(style::PrintStyledContent(
                     StyledContent::new(ContentStyle {
-                        foreground_color: Some(self.get_color(word)),
+                        foreground_color: Some(self.get_color(word.as_str())),
                         background_color: None,
                         attributes : Attributes::default(),
                     }, word))){
                     Ok(_) => {},
                     Err(_) => {},
                 };
+                // match stdout.queue(style::PrintStyledContent(
+                //     " ".reset())){
+                //     Ok(_) => {},
+                //     Err(_) => {},
+                // };
+            }
+            if i != line.len()-1 {
                 match stdout.queue(style::PrintStyledContent(
-                    " ".reset())){
+                    "\r\n".reset())){
                     Ok(_) => {},
                     Err(_) => {},
                 };
-              
-            });
-            match stdout.queue(style::PrintStyledContent(
-                "\r\n".reset())){
-                Ok(_) => {},
-                Err(_) => {},
-            };      
+            }
         }
         match stdout.flush() {
             Ok(_) => {},
@@ -427,4 +509,42 @@ impl ColorWord{
                     
        
     }
+    
+}
+
+
+fn split_up(input : String) -> Vec<String> {
+    return pop_off_these(vec![input], vec![" ", "(", ")", "{", "}", ".", ";", ":", "\"", "'", "[", "]"]);
+}
+
+fn pop_off_these(mut input : Vec<String>, items : Vec<&str>) -> Vec<String> {
+    for item in items {
+        input = pop_off(input, item);
+    }
+    input
+}
+
+fn pop_off(input : Vec<String>, item : &str) -> Vec<String> {
+    let mut output : Vec<String> = Vec::new();
+    for i in input {
+        let mut rest = i;
+        while rest.contains(item) {
+            let (first, second) = match rest.split_once(item) {
+                Some(t) => t,
+                None => {
+                    output.push(String::from(&rest));
+                    break;
+                }
+            };
+            if first != "" {
+                output.push(String::from(first));
+            }
+            output.push(String::from(item));
+            rest = second.to_owned();
+        }
+        if rest != "" {
+            output.push(String::from(rest));
+        }
+    }
+    output
 }

@@ -9,6 +9,17 @@ pub enum PageType {
     ReplaceP2,
 }
 
+impl PageType {
+    pub fn overwrites(&self) -> bool {
+        match self {
+            PageType::Find => false,
+            PageType::ReplaceP1 => false,
+            PageType::ReplaceP2 => false,
+            _ => true,
+        }
+    }
+}
+
 /*
     Struct for displaying file contents to user
 */
