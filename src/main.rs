@@ -700,6 +700,8 @@ impl EachRowContent {
 
 // highlight the search result
 // syntax highlight function // not used in version2
+
+
 enum HighLight {
     Normal,
     Number,

@@ -243,8 +243,11 @@ impl Screen {
         let temp01 = match &self.mode {
             Mode::Normal => {
                 queue!(stdout(), Print(&on_screen.prompt.replace('\n', "\r\n"))).unwrap();
-                queue!(stdout(), Print(content)).unwrap();
-                return;
+                let color = ColorWord::new(content.clone());
+                let text: &str = &content.clone()[..];
+                return color.coloring(text);                    
+                // queue!(stdout(), Print(content)).unwrap();
+                // return;
             },
             Mode::Find(t) => {t},
             Mode::Replace(t) => {t},
@@ -326,3 +329,102 @@ impl Screen {
 
 // Potential additions to screen
 // pub pub fn active_type(&self) -> PageType {
+pub struct ColorWord{
+    word: String,
+    red: Vec<String>,
+    yellow: Vec<String>,
+    blue: Vec<String>,
+    green: Vec<String>,
+    other: Vec<String>,
+}
+impl ColorWord{
+    pub fn new(word: String) -> Self{
+        Self{
+            word: word,
+            red: vec!["=".to_string()],
+            yellow: Vec::new(),
+            blue: vec!["#".to_string()],
+            green: vec!["This".to_string()],
+            other: Vec::new(),
+                
+        }
+    }
+    
+    pub fn get_color(&self, word: &str) -> Color{
+        for w in &self.red {
+            if word == w {
+                return Color::Magenta;
+            }
+        }
+        for w in &self.yellow {
+            if word == w {
+                return Color::Yellow;
+    
+            }
+        }
+        for w in &self.blue {
+            if word == w {
+                return Color::Blue;                
+            }
+        }
+        for w in &self.green {
+            if word == w {
+                return Color::DarkGreen;                
+            }
+        }
+        Color::Reset
+    }
+    
+    pub fn get_background_color(&self, c : &str) -> Color {
+        if c == self.word {
+            Color::Red
+        } else {
+            Color::Reset
+        }
+    }
+    
+    pub fn coloring(&self, text: &str) {
+        let mut stdout = stdout();
+        // match stdout.queue(cursor::MoveTo(0,0)) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // };
+        // match stdout.execute(terminal::Clear(terminal::ClearType::All)) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // };
+        let line:Vec<&str> = text.split("\r\n").collect();
+    
+        for l in line{
+            l.split(" ").enumerate().for_each(|(_i, word)| {
+                // The actual printing part \/
+                match stdout.queue(style::PrintStyledContent(
+                    StyledContent::new(ContentStyle {
+                        foreground_color: Some(self.get_color(word)),
+                        background_color: None,
+                        attributes : Attributes::default(),
+                    }, word))){
+                    Ok(_) => {},
+                    Err(_) => {},
+                };
+                match stdout.queue(style::PrintStyledContent(
+                    " ".reset())){
+                    Ok(_) => {},
+                    Err(_) => {},
+                };
+              
+            });
+            match stdout.queue(style::PrintStyledContent(
+                "\r\n".reset())){
+                Ok(_) => {},
+                Err(_) => {},
+            };      
+        }
+        match stdout.flush() {
+            Ok(_) => {},
+            Err(_) => {},
+        };       
+                    
+       
+    }
+}
