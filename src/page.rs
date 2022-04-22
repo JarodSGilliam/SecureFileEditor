@@ -7,12 +7,14 @@ pub enum PageType {
     Info,
     ReplaceP1,
     ReplaceP2,
+    Command,
 }
 
 impl PageType {
     pub fn overwrites(&self) -> bool {
         match self {
             PageType::Find => false,
+            PageType::Command => false,
             PageType::ReplaceP1 => false,
             PageType::ReplaceP2 => false,
             _ => true,

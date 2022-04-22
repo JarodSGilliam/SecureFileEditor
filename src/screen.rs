@@ -369,52 +369,33 @@ impl Screen {
         // // println!("{:?}", &on_screen.prompt);
     }
 
-    /*
-    pub fn draw_info_bar(&mut self, on_screen: &Display) {
-        on_screen.contents.push_str(&style::Attribute::Reverse.to_string());
-        (0..key_handler.)
-    }
-    */
-
     pub fn print_overlay(&mut self, i : usize, content : String) {
         let mut stdout = stdout();
-        // let on_screen = self.page_stack.get_mut(i).unwrap();
         let y = self.key_handler.screen_rows/2;
         let x = self.key_handler.screen_cols/6;
         
-        let temp : Vec<String> = self.page_stack[i].prompt.clone().trim().split("\n").map(|x|x.to_owned()).collect();
-        Screen::print_at_times(&mut stdout, x, y-1-temp.len(), "-", self.key_handler.screen_cols * 4/6);
-        // match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // }
-        // for _i in 0..self.key_handler.screen_cols * 4/6 {
-        //     match stdout.queue(style::PrintStyledContent("-".reset())) {
-        //         Ok(_) => {},
-        //         Err(_) => {},
-        //     }
-        // }
-        for i in 0..temp.len() {
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols, x, y-(temp.len()-i), temp[i].to_owned());
+        let prompt_as_array : Vec<String> = self.page_stack[i].prompt.clone().trim().split("\n").map(|x|x.to_owned()).collect();
+        let length = {
+            if prompt_as_array == vec![""] {
+                0
+            } else {
+                prompt_as_array.len()
+            }
+        };
+        Screen::print_at_times(&mut stdout, x, y-1-length, "-", self.key_handler.screen_cols * 4/6);
+        for i in 0..length {
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols*4/6, x, y-(length-i), prompt_as_array[i].to_owned());
         }
-        Screen::create_line(&mut stdout, self.key_handler.screen_cols, x, y, content);
-        // Screen::clean_line(&mut stdout, self.key_handler.screen_cols, x, y);
-        // Screen::print_at(&mut stdout, x, y, "| ");
-        // Screen::print_at_times(&mut stdout, x+2, y, " ", self.key_handler.screen_cols*4/6-4);
-        // match stdout.queue(style::PrintStyledContent(" |".reset())) {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // }
-        // Screen::print_at(&mut stdout, x+2, y, content.as_str());
-        // match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // }
-        // match stdout.queue(style::PrintStyledContent("| ".reset())) {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // }
+        Screen::create_line(&mut stdout, self.key_handler.screen_cols*4/6, x, y, content);
         Screen::print_at_times(&mut stdout, x, y+1, "-", self.key_handler.screen_cols * 4/6);
+
+        if self.page_stack[i].display_type == PageType::Command {
+            let x = self.key_handler.screen_cols/4;
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+2, "Command 1".to_owned());
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+3, "Command 1".to_owned());
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+4, "Command 1".to_owned());
+            Screen::print_at_times(&mut stdout, x, y+5, "-", self.key_handler.screen_cols/2);
+        }
     }
 
     pub fn create_line(stdout : &mut std::io::Stdout, width : usize, x : usize, y : usize, text : String) {
@@ -424,7 +405,7 @@ impl Screen {
 
     pub fn clean_line(stdout : &mut std::io::Stdout, width : usize, x : usize, y : usize) {
         Screen::print_at(stdout, x, y, "| ");
-        Screen::print_at_times(stdout, x+2, y, " ", width*4/6-4);
+        Screen::print_at_times(stdout, x+2, y, " ", width-4);
         match stdout.queue(style::PrintStyledContent(" |".reset())) {
             Ok(_) => {},
             Err(_) => {},

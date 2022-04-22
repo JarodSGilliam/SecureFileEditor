@@ -164,6 +164,14 @@ fn main() {
                     screen.add_info_page(String::from(FileIO::get_metadata(&pathname)));
                 }
 
+                KeyEvent {
+                    code: KeyCode::Char(' '),
+                    modifiers: event::KeyModifiers::CONTROL,
+                } => {
+                    screen.add(PageType::Command);
+                    // screen.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+                }
+
                 // Events that move the cursor
                 KeyEvent {
                     code:
