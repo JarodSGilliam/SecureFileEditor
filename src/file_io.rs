@@ -185,4 +185,29 @@ impl FileIO {
             None
         }
     }
+
+    pub fn get_highlights(file_type : String) -> Option<(Vec<String>, Vec<String>, Vec<String>, Vec<String>)> {
+        if file_type == "" {
+            return None;
+        }
+        let info = FileIO::get_file_contents(&Some(String::from("highlighting.txt")));
+        if info == "" {
+            return None;
+        }
+        let lines : Vec<&str> = info.split("\n").collect();
+        for i in 0..((lines.len()+1)/10) {
+            // println!("{}", lines[i*10]);
+            let b = i*10;
+            for a in lines[b].split(",") {
+                if a.trim() == file_type {
+                    let red : Vec<String> = lines[b+2].split(",").map(|x| String::from(x.trim())).collect();
+                    let blue : Vec<String> = lines[b+4].split(",").map(|x| String::from(x.trim())).collect();
+                    let green : Vec<String> = lines[b+6].split(",").map(|x| String::from(x.trim())).collect();
+                    let yellow : Vec<String> = lines[b+8].split(",").map(|x| String::from(x.trim())).collect();
+                    return Some((red, blue, green, yellow));
+                }
+            }
+        }
+        None
+    }
 }
