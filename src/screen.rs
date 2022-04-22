@@ -270,7 +270,7 @@ impl Screen {
                     Ok(_) => {},
                     Err(_) => {},
                 }
-                let mut color = ColorWord::new(content.clone());
+                let mut color = ColorWord::new(String::from("java"));
                 let text: &str = &content.clone()[..];
                 color.coloring(text);
                 // queue!(stdout(), Print(content)).unwrap();
