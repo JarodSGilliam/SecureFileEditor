@@ -42,9 +42,11 @@ pub struct Screen {
     pub page_stack: Vec<Page>,
     pub key_handler: KeyHandler,
     pub mode: Mode,
+    pub file_name: Option<String>,
+    pub modified: bool,
 }
 impl Screen {
-    pub fn new() -> Self {
+    pub fn new(file_name : Option<String>) -> Self {
         let screen_size = terminal::size()
             .map(|(x, y)| (x as usize, y as usize))
             .unwrap();
@@ -52,6 +54,8 @@ impl Screen {
             page_stack:  Vec::new(),
             key_handler: KeyHandler::new(screen_size),
             mode: Mode::Normal,
+            file_name,
+            modified: false,
         }
     }
 
@@ -81,6 +85,14 @@ impl Screen {
 
     pub fn text_page_mut(&mut self) -> &mut Page {
         self.page_stack.first_mut().unwrap()
+    }
+
+    pub fn reset_prompt(&mut self) {
+        let name = match &self.file_name {
+            Some(t) => t.clone(),
+            None => String::new(),
+        };
+        self.text_page_mut().set_prompt(name);
     }
 
     pub fn push(&mut self, page : Page) {
@@ -248,80 +260,100 @@ impl Screen {
         self.key_handler.bytes_in_row = bytes;
         self.key_handler.width_in_row = width;
         let temp01 = match &self.mode {
-            Mode::Normal => {
-                let mut stdout = stdout();
-                let mut y = 0;
-                if !on_screen.display_type.overwrites() {
-                    y = self.key_handler.screen_rows-2-on_screen.prompt.matches("\n").count();
-                }
-                match stdout.queue(cursor::MoveTo(0, y as u16)) {
+            Mode::Normal => None,
+            Mode::Find(t) => Some(String::from(t.as_str())),
+            Mode::Replace(t) => Some(String::from(t.as_str())),
+        };
+        let mut stdout = stdout();
+        let mut y = 0;
+        if !on_screen.display_type.overwrites() {
+            y = self.key_handler.screen_rows-2-on_screen.prompt.matches("\n").count();
+        }
+        match stdout.queue(cursor::MoveTo(0, y as u16)) {
+            Ok(_) => {},
+            Err(_) => {},
+        };
+        if !on_screen.display_type.overwrites() {
+            for _i in 0..self.key_handler.screen_cols {
+                match stdout.queue(style::PrintStyledContent("-".reset())) {
                     Ok(_) => {},
                     Err(_) => {},
-                };
-                if !on_screen.display_type.overwrites() {
-                    for _i in 0..self.key_handler.screen_cols {
-                        match stdout.queue(style::PrintStyledContent("-".reset())) {
-                            Ok(_) => {},
-                            Err(_) => {},
-                        }
-                    }
                 }
+            }
+        }
+        if on_screen.display_type == PageType::Text {
+            for _i in 0..(self.key_handler.screen_cols-on_screen.prompt.len())/2 {
+                match stdout.queue(style::PrintStyledContent(" ".reset())) {
+                    Ok(_) => {},
+                    Err(_) => {},
+                }
+            }
+            if self.modified {
+                match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").red())) {
+                    Ok(_) => {},
+                    Err(_) => {},
+                }
+            } else {
                 match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset())) {
                     Ok(_) => {},
                     Err(_) => {},
                 }
-                let mut color = ColorWord::new(String::from("java"));
-                let text: &str = &content.clone()[..];
-                color.coloring(text);
-                // queue!(stdout(), Print(content)).unwrap();
-                // return;
-                match stdout.flush() {
-                    Ok(_) => {},
-                    Err(_) => {},
-                };
-                return; 
-            },
-            Mode::Find(t) => {t},
-            Mode::Replace(t) => {t},
-        };
-        let target_term = temp01.as_str();
-
-        let mut stdout = stdout();
-        let color = "";
-
-
-        let content_copy = content.clone();
-        // let target_term : &str = "test";
-        // match stdout.execute(terminal::Clear(terminal::ClearType::All)) {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // };
-
-        match stdout.queue(cursor::MoveTo(0,0)) {
-            Ok(_) => {},
-            Err(_) => {},
-        };
-        stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset()));
-        
-        let mut spot = 0;
-        // stdout.queue(cursor::MoveTo(0,0));
-        let tempvect : Vec<_> = content_copy.match_indices(target_term).collect();
-        for i in tempvect {
-            let temp = String::from(&content_copy[spot..i.0]);
-            match color {
-                "black" => {stdout.queue(style::PrintStyledContent(temp.black()))},
-                _ => {stdout.queue(style::PrintStyledContent(temp.reset()))},
-            };
-            spot = i.0+target_term.len();
-            let temp = String::from(&content_copy[i.0..spot]);
-            stdout.queue(style::PrintStyledContent(temp.on_red()));
+            }
+        } else {
+            match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset())) {
+                Ok(_) => {},
+                Err(_) => {},
+            }
         }
-        println!("{}", &content_copy[spot..]);
+        let mut color = ColorWord::new(temp01, String::from("java"));
+        let text: &str = &content.clone()[..];
+        color.coloring(text);
+        // queue!(stdout(), Print(content)).unwrap();
+        // return;
         match stdout.flush() {
             Ok(_) => {},
             Err(_) => {},
         };
-        // println!("{:?}", &on_screen.prompt);
+        return;
+
+        // let target_term = temp01.as_str();
+
+        // let mut stdout = stdout();
+        // let color = "";
+
+
+        // let content_copy = content.clone();
+        // // let target_term : &str = "test";
+        // // match stdout.execute(terminal::Clear(terminal::ClearType::All)) {
+        // //     Ok(_) => {},
+        // //     Err(_) => {},
+        // // };
+
+        // match stdout.queue(cursor::MoveTo(0,0)) {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // };
+        // stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset()));
+        
+        // let mut spot = 0;
+        // // stdout.queue(cursor::MoveTo(0,0));
+        // let tempvect : Vec<_> = content_copy.match_indices(target_term).collect();
+        // for i in tempvect {
+        //     let temp = String::from(&content_copy[spot..i.0]);
+        //     match color {
+        //         "black" => {stdout.queue(style::PrintStyledContent(temp.black()))},
+        //         _ => {stdout.queue(style::PrintStyledContent(temp.reset()))},
+        //     };
+        //     spot = i.0+target_term.len();
+        //     let temp = String::from(&content_copy[i.0..spot]);
+        //     stdout.queue(style::PrintStyledContent(temp.on_red()));
+        // }
+        // println!("{}", &content_copy[spot..]);
+        // match stdout.flush() {
+        //     Ok(_) => {},
+        //     Err(_) => {},
+        // };
+        // // println!("{:?}", &on_screen.prompt);
     }
 
     /*
@@ -365,7 +397,7 @@ impl Screen {
 // Potential additions to screen
 // pub pub fn active_type(&self) -> PageType {
 pub struct ColorWord{
-    // word: String,
+    word: Option<String>,
     disable: bool,
     red: Vec<String>,
     yellow: Vec<String>,
@@ -379,10 +411,10 @@ pub struct ColorWord{
     brackets: usize,
 }
 impl ColorWord{
-    pub fn new(file_type: String) -> Self {
+    pub fn new(word: Option<String>, file_type: String) -> Self {
         let color_details = FileIO::get_highlights(file_type).unwrap();
         Self{
-            // word: word,
+            word: word,
             disable: false,
             red: color_details.0,
             yellow: color_details.3,
@@ -457,11 +489,16 @@ impl ColorWord{
     }
     
     pub fn get_background_color(&self, c : &str) -> Color {
-        // if c == self.word {
-        //     Color::Red
-        // } else {
-            Color::Reset
-        // }
+        match &self.word {
+            Some(color) => {
+                if c == color {
+                    Color::Red
+                } else {
+                    Color::Reset
+                }
+            },
+            None => Color::Reset,
+        }
     }
     
     pub fn coloring(&mut self, text: &str) {
@@ -482,7 +519,7 @@ impl ColorWord{
                 match stdout.queue(style::PrintStyledContent(
                     StyledContent::new(ContentStyle {
                         foreground_color: Some(self.get_color(word.as_str())),
-                        background_color: None,
+                        background_color: Some(self.get_background_color(word.as_str())),
                         attributes : Attributes::default(),
                     }, word))){
                     Ok(_) => {},

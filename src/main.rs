@@ -55,7 +55,7 @@ fn main() {
         Err(e) => eprint!("{}", e),
     };
     //Creates the screen on which everything is displayed
-    let mut screen: Screen = Screen::new();
+    let mut screen: Screen = Screen::new(opened_file_path.clone());
     // Counts the number of operations that have been executed since the last autosave or file opening
     let mut operations: usize = 0;
     
@@ -65,6 +65,7 @@ fn main() {
         PageType::Text,
         FileIO::get_file_contents(&opened_file_path),
     ));
+    screen.reset_prompt();
 
     // let mut the_text_that_is_being_searched_for = String::new();
 
@@ -318,7 +319,8 @@ fn main() {
                             screen.active_mut().set_prompt(String::from("Replace P2:\nReplace:"));
                             println!("{}", screen.search_text().unwrap());
                             if screen.find_mode() {
-                                screen.text_page_mut().set_prompt(String::from(""));
+                                // screen.text_page_mut().set_prompt(String::from(""));
+                                screen.reset_prompt();
                             }
                             // screen.mode = Mode::Replace();
                             continue;
@@ -345,7 +347,8 @@ fn main() {
                             // for
                             println!("{}", to_replace);
                             if screen.find_mode() {
-                                screen.text_page_mut().set_prompt(String::from(""));
+                                // screen.text_page_mut().set_prompt(String::from(""));
+                                screen.reset_prompt();
                             }
                             // screen.mode = Mode::Normal;
                             continue;
@@ -362,7 +365,8 @@ fn main() {
                         screen.add_help_page();
                     }
                     if screen.find_mode() {
-                        screen.text_page_mut().set_prompt(String::from(""));
+                        // screen.text_page_mut().set_prompt(String::from(""));
+                        screen.reset_prompt();
                     }
                     screen.mode = Mode::Normal;
                 }
@@ -398,7 +402,8 @@ fn main() {
                         */
                     }
                     if screen.find_mode() {
-                        screen.text_page_mut().set_prompt(String::from(""));
+                        // screen.text_page_mut().set_prompt(String::from(""));
+                        screen.reset_prompt();
                     }
                     screen.mode = Mode::Normal;
                 }
@@ -413,7 +418,8 @@ fn main() {
                         screen.active_mut().set_prompt(String::from("Replace P1:\nFind:"));
                     }
                     if screen.find_mode() {
-                        screen.text_page_mut().set_prompt(String::from(""));
+                        // screen.text_page_mut().set_prompt(String::from(""));
+                        screen.reset_prompt();
                     }
                     screen.mode = Mode::Normal;
                 }
@@ -429,7 +435,8 @@ fn main() {
                         // screen.key_handler.ip_y = cursor_location.1;
                     } else {
                         if screen.find_mode() || screen.mode.to_str() == "replace" {
-                            screen.text_page_mut().set_prompt(String::from(""));
+                            // screen.text_page_mut().set_prompt(String::from(""));
+                            screen.reset_prompt();
                             screen.mode = Mode::Normal;
                             continue;
                         }
