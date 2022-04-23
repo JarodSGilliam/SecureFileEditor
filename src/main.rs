@@ -1,5 +1,6 @@
 use std::io::{stdout, BufRead, Write};
 use std::{cmp, fs, io, thread, time};
+use std::path::Path;
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::style::*;
@@ -41,6 +42,9 @@ fn main() {
         }, 
         None => {},
     }
+
+    let mut save_as_warned = false;
+
     //println!("extension: {}", extension);
     //let mut builder = SyntaxSetBuilder::new();
     let s_set = SyntaxSet::load_defaults_newlines();
@@ -128,6 +132,20 @@ fn main() {
                     // break
                 }
 
+                //save file as [name]
+                KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: event::KeyModifiers::ALT,
+                } => {
+                    if screen.page_stack.len() == 1 {
+                        screen.add(PageType::SaveAs);
+                        screen.active_mut().set_prompt(String::from("Save As:"));
+                    }
+
+                    screen.mode = Mode::Normal;
+                    
+                }
+
                 KeyEvent {
                     //move to next occurrence
                     code: KeyCode::Right,
@@ -146,7 +164,6 @@ fn main() {
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     if (screen.find_mode()) && coordinates.len() > 0 && (point > 0) {
-                        //println!("\nctrl p OK\n");
                         point -= 1;
                         screen.key_handler.ip.x = coordinates[point].0;
                         screen.key_handler.ip.y = coordinates[point].1;
@@ -216,6 +233,39 @@ fn main() {
                             screen.insertion(KeyCode::Enter);
                             continue;
                         }
+                        
+                        PageType::SaveAs => {
+                            screen.mode = Mode::SaveAs(screen.active().contents.clone());
+                            match screen.search_text() {
+                                Some(string) => {
+                                    let pathname = string.clone();
+                                    let new_text: &String = &screen.text_page().contents;
+                                    //println!("new_text: {}", new_text);
+
+                                    if (!Path::new(pathname.as_str()).exists() | save_as_warned) {   //if the specified filename does not already exist
+                                        match FileIO::overwrite_to_file(&pathname, new_text) {
+                                            Ok(_) => {
+                                                screen.file_name = Some(pathname.clone());
+                                                screen.reset_prompt();
+                                                screen.pop();
+                                                save_as_warned = false;
+                                            },
+                                            Err(e) => eprint!("Failed to save as new file due to error {}", e),
+                                        }
+                                    } else {
+                                        screen.active_mut().set_prompt(String::from("Warning: File Already Exists, Press Enter to Overwrite or choose new file name"));
+                                        save_as_warned = true;
+                                    }
+                                },
+
+                                None => {   //if user did not enter text to save the file under
+                                    screen.pop();
+                                    save_as_warned = false;
+                                },
+                           }
+                        }
+
+
                         PageType::Find => {
                             screen.mode = Mode::Find(screen.active().contents.clone());
                             print!(
@@ -342,7 +392,8 @@ fn main() {
                             let temp007 = match &screen.mode {
                                 Mode::Normal => break,
                                 Mode::Find(_) => break,
-                                Mode::Replace(t) => t
+                                Mode::Replace(t) => t,
+                                Mode::SaveAs(t) => break
                             }.clone();
                             screen.text_page_mut().contents =
                                 screen.text_page_mut().contents.replace(

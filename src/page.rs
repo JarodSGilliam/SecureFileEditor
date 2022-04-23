@@ -8,6 +8,7 @@ pub enum PageType {
     ReplaceP1,
     ReplaceP2,
     Command,
+    SaveAs,
 }
 
 impl PageType {
@@ -17,6 +18,7 @@ impl PageType {
             PageType::Command => false,
             PageType::ReplaceP1 => false,
             PageType::ReplaceP2 => false,
+            PageType::SaveAs => false,
             _ => true,
         }
     }

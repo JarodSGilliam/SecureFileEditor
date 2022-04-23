@@ -22,6 +22,7 @@ pub enum Mode {
     Normal,
     Find(String),
     Replace(String),
+    SaveAs(String),
 }
 
 impl Mode {
@@ -30,6 +31,7 @@ impl Mode {
             Mode::Normal => "normal",
             Mode::Find(_) => "find",
             Mode::Replace(_) => "replace",
+            Mode::SaveAs(_) => "saveas"
         }
     }
 }
@@ -68,6 +70,7 @@ impl Screen {
             Mode::Normal => None,
             Mode::Find(t) => Some(t.clone()),
             Mode::Replace(t) => Some(t.clone()),
+            Mode::SaveAs(t) => Some(t.clone()),
         }
     }
 
@@ -268,6 +271,7 @@ impl Screen {
             Mode::Normal => None,
             Mode::Find(t) => Some(String::from(t.as_str())),
             Mode::Replace(t) => Some(String::from(t.as_str())),
+            Mode::SaveAs(t) => Some(String::from(t.as_str())),
         };
         let mut stdout = stdout();
         let mut y = 0;

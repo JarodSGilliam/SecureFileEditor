@@ -1,8 +1,10 @@
-Ctrl + h = help page
-Ctrl + f = find (will place cursor at first instance)
-Ctrl + left = moves to previous "find" result
-Ctrl + right = moves to next "find" result
-Ctrl + r = replace
-Ctrl + w = close file
-Ctrl + d = detailed file information
+Ctrl + h = Help Page
+Ctrl + s = Save File
+Alt + s = Save As
+Ctrl + f = Find (will place cursor at first instance)
+Ctrl + left = Moves to previous "find" result
+Ctrl + right = Moves to next "find" result
+Ctrl + r = Replace
+Ctrl + w = Close file
+Ctrl + d = Detailed file information
 [Esc] to leave this screen
