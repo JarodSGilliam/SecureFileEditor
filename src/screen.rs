@@ -283,10 +283,12 @@ impl Screen {
             Err(_) => {},
         }
         if on_screen.display_type == PageType::Text {
-            for _i in 0..(self.key_handler.screen_cols-on_screen.prompt.len())/2 {
-                match stdout.queue(style::PrintStyledContent(" ".reset())) {
-                    Ok(_) => {},
-                    Err(_) => {},
+            if self.key_handler.screen_cols > on_screen.prompt.len() {
+                for _i in 0..(self.key_handler.screen_cols-on_screen.prompt.len())/2 {
+                    match stdout.queue(style::PrintStyledContent(" ".reset())) {
+                        Ok(_) => {},
+                        Err(_) => {},
+                    }
                 }
             }
             if self.modified {
