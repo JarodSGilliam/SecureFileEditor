@@ -1,21 +1,19 @@
-use crossterm::{cursor, execute, queue, terminal};
-use crossterm::terminal::ClearType;
-use crossterm::event::KeyCode;
-use crossterm::style::*;
-use unicode_truncate::UnicodeTruncateStr;
-use unicode_width::UnicodeWidthStr;
-use std::io::{stdout, Write};
-use crate::insertion_point::*;
 use crate::file_io::FileIO;
+use crate::insertion_point::*;
 use crate::key_handler::*;
 use crate::page::*;
-
+use crossterm::event::KeyCode;
+use crossterm::style::*;
+use crossterm::terminal::ClearType;
+use crossterm::{cursor, execute, queue, terminal};
+use std::io::{stdout, Write};
+use unicode_truncate::UnicodeTruncateStr;
+use unicode_width::UnicodeWidthStr;
 
 use crossterm::{
-    ExecutableCommand, QueueableCommand,
-    style::{self, Stylize}, Result
+    style::{self, Stylize},
+    ExecutableCommand, QueueableCommand, Result,
 };
-
 
 #[derive(PartialEq)]
 pub enum Mode {
@@ -31,7 +29,7 @@ impl Mode {
             Mode::Normal => "normal",
             Mode::Find(_) => "find",
             Mode::Replace(_) => "replace",
-            Mode::SaveAs(_) => "saveas"
+            Mode::SaveAs(_) => "saveas",
         }
     }
 }
@@ -48,12 +46,12 @@ pub struct Screen {
     pub modified: bool,
 }
 impl Screen {
-    pub fn new(file_name : Option<String>) -> Self {
+    pub fn new(file_name: Option<String>) -> Self {
         let screen_size = terminal::size()
             .map(|(x, y)| (x as usize, y as usize))
             .unwrap();
         Self {
-            page_stack:  Vec::new(),
+            page_stack: Vec::new(),
             key_handler: KeyHandler::new(screen_size),
             mode: Mode::Normal,
             file_name,
@@ -98,14 +96,19 @@ impl Screen {
         self.text_page_mut().set_prompt(name);
     }
 
-    pub fn push(&mut self, page : Page) {
+    pub fn push(&mut self, page: Page) {
         self.page_stack.push(page);
     }
 
     pub fn pop(&mut self) -> Option<Page> {
         if self.page_stack.len() > 1 {
             let temp = self.page_stack.pop().unwrap();
-            self.key_handler.ip = self.active().active_cursor_location.as_ref().unwrap().clone();
+            self.key_handler.ip = self
+                .active()
+                .active_cursor_location
+                .as_ref()
+                .unwrap()
+                .clone();
             self.active_mut().active_cursor_location = None;
             Some(temp)
         } else {
@@ -124,18 +127,17 @@ impl Screen {
         // self.key_handler = KeyHandler::new(screen_size);
     }
 
-
     pub fn add_help_page(&mut self) {
         self.add(PageType::Info);
         self.active_mut().set_prompt(String::from("Help:"));
-        let help_text: String =
-            FileIO::read_from_file(&String::from("help.txt")).unwrap_or(String::from(
-                "Help file not found. More on \"https://github.com/JarodSGilliam/SecureFileEditor\"",
-            ));
+        let help_text: String = FileIO::read_from_file(&String::from("help.txt"))
+            .unwrap_or(String::from(
+            "Help file not found. More on \"https://github.com/JarodSGilliam/SecureFileEditor\"",
+        ));
         self.active_mut().set_contents(help_text);
     }
 
-    pub fn add_info_page(&mut self, info : String) {
+    pub fn add_info_page(&mut self, info: String) {
         self.add(PageType::Info);
         self.active_mut().set_contents(info);
         match self.refresh_screen() {
@@ -144,35 +146,31 @@ impl Screen {
         };
     }
 
-    pub fn move_ip(&mut self, direction : KeyCode) {
-        self.key_handler.move_ip(
-            direction,
-            self.page_stack.first_mut().unwrap()
-        );
+    pub fn move_ip(&mut self, direction: KeyCode) {
+        self.key_handler
+            .move_ip(direction, self.page_stack.first_mut().unwrap());
     }
 
-    pub fn insertion(&mut self, input : KeyCode) {
-        self.key_handler.insertion(input, self.page_stack.last_mut().unwrap());
+    pub fn insertion(&mut self, input: KeyCode) {
+        self.key_handler
+            .insertion(input, self.page_stack.last_mut().unwrap());
     }
 
     pub fn clear_screen() -> crossterm::Result<()> {
         execute!(stdout(), terminal::Clear(ClearType::All))?;
         execute!(stdout(), cursor::MoveTo(0, 0))
     }
-    
     pub fn render(&mut self) {
         if self.active().display_type.overwrites() {
-            self.draw_content(self.page_stack.len()-1);
+            self.draw_content(self.page_stack.len() - 1);
             return;
         }
         for i in 0..self.page_stack.len() {
             self.draw_content(i);
         }
     }
-    
-    
     //print the char, and get the char of each row, get the total row number
-    pub fn draw_content(&mut self, i : usize) {
+    pub fn draw_content(&mut self, i: usize) {
         let on_screen = self.page_stack.get_mut(i).unwrap();
         on_screen.row_contents = split_with_n(&on_screen.contents);
         // let calculator: Vec<&str> = on_screen.contents.split("\n").collect();
@@ -280,36 +278,41 @@ impl Screen {
             self.print_overlay(i, content);
             return;
         }
-        if !on_screen.display_type.overwrites() {
-        }
+        if !on_screen.display_type.overwrites() {}
         match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
-            Ok(_) => {},
-            Err(_) => {},
+            Ok(_) => {}
+            Err(_) => {}
         }
         if on_screen.display_type == PageType::Text {
             if self.key_handler.screen_cols > on_screen.prompt.len() {
-                for _i in 0..(self.key_handler.screen_cols-on_screen.prompt.len())/2 {
+                for _i in 0..(self.key_handler.screen_cols - on_screen.prompt.len()) / 2 {
                     match stdout.queue(style::PrintStyledContent(" ".reset())) {
-                        Ok(_) => {},
-                        Err(_) => {},
+                        Ok(_) => {}
+                        Err(_) => {}
                     }
                 }
             }
             if self.modified {
-                match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").red())) {
-                    Ok(_) => {},
-                    Err(_) => {},
+                match stdout.queue(style::PrintStyledContent(
+                    on_screen.prompt.replace('\n', "\r\n").red(),
+                )) {
+                    Ok(_) => {}
+                    Err(_) => {}
                 }
             } else {
-                match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset())) {
-                    Ok(_) => {},
-                    Err(_) => {},
+                match stdout.queue(style::PrintStyledContent(
+                    on_screen.prompt.replace('\n', "\r\n").reset(),
+                )) {
+                    Ok(_) => {}
+                    Err(_) => {}
                 }
             }
         } else {
-            match stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset())) {
-                Ok(_) => {},
-                Err(_) => {},
+            match stdout.queue(style::PrintStyledContent(
+                on_screen.prompt.replace('\n', "\r\n").reset(),
+            )) {
+                Ok(_) => {}
+                Err(_) => {}
             }
         }
         let mut color = ColorWord::new(temp01, String::from("java"));
@@ -318,20 +321,20 @@ impl Screen {
         // queue!(stdout(), Print(content)).unwrap();
         // return;
         if !on_screen.display_type.overwrites() {
-            match stdout.queue(cursor::MoveTo(x as u16, (y+3) as u16)) {
-                Ok(_) => {},
-                Err(_) => {},
+            match stdout.queue(cursor::MoveTo(x as u16, (y + 3) as u16)) {
+                Ok(_) => {}
+                Err(_) => {}
             }
-            for _i in 0..self.key_handler.screen_cols * 4/6 {
+            for _i in 0..self.key_handler.screen_cols * 4 / 6 {
                 match stdout.queue(style::PrintStyledContent("-".reset())) {
-                    Ok(_) => {},
-                    Err(_) => {},
+                    Ok(_) => {}
+                    Err(_) => {}
                 }
             }
         }
         match stdout.flush() {
-            Ok(_) => {},
-            Err(_) => {},
+            Ok(_) => {}
+            Err(_) => {}
         };
         return;
 
@@ -339,7 +342,6 @@ impl Screen {
 
         // let mut stdout = stdout();
         // let color = "";
-
 
         // let content_copy = content.clone();
         // // let target_term : &str = "test";
@@ -353,7 +355,6 @@ impl Screen {
         //     Err(_) => {},
         // };
         // stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset()));
-        
         // let mut spot = 0;
         // // stdout.queue(cursor::MoveTo(0,0));
         // let tempvect : Vec<_> = content_copy.match_indices(target_term).collect();
@@ -375,12 +376,18 @@ impl Screen {
         // // println!("{:?}", &on_screen.prompt);
     }
 
-    pub fn print_overlay(&mut self, i : usize, content : String) {
+    pub fn print_overlay(&mut self, i: usize, content: String) {
         let mut stdout = stdout();
-        let y = self.key_handler.screen_rows/2;
-        let x = self.key_handler.screen_cols/6;
-        
-        let prompt_as_array : Vec<String> = self.page_stack[i].prompt.clone().trim().split("\n").map(|x|x.to_owned()).collect();
+        let y = self.key_handler.screen_rows / 2;
+        let x = self.key_handler.screen_cols / 6;
+
+        let prompt_as_array: Vec<String> = self.page_stack[i]
+            .prompt
+            .clone()
+            .trim()
+            .split("\n")
+            .map(|x| x.to_owned())
+            .collect();
         let length = {
             if prompt_as_array == vec![""] {
                 0
@@ -388,54 +395,106 @@ impl Screen {
                 prompt_as_array.len()
             }
         };
-        Screen::print_at_times(&mut stdout, x, y-1-length, "-", self.key_handler.screen_cols * 4/6);
+        Screen::print_at_times(
+            &mut stdout,
+            x,
+            y - 1 - length,
+            "-",
+            self.key_handler.screen_cols * 4 / 6,
+        );
         for i in 0..length {
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols*4/6, x, y-(length-i), prompt_as_array[i].to_owned());
+            Screen::create_line(
+                &mut stdout,
+                self.key_handler.screen_cols * 4 / 6,
+                x,
+                y - (length - i),
+                prompt_as_array[i].to_owned(),
+            );
         }
-        Screen::create_line(&mut stdout, self.key_handler.screen_cols*4/6, x, y, content);
-        Screen::print_at_times(&mut stdout, x, y+1, "-", self.key_handler.screen_cols * 4/6);
+        Screen::create_line(
+            &mut stdout,
+            self.key_handler.screen_cols * 4 / 6,
+            x,
+            y,
+            content,
+        );
+        Screen::print_at_times(
+            &mut stdout,
+            x,
+            y + 1,
+            "-",
+            self.key_handler.screen_cols * 4 / 6,
+        );
 
         if self.page_stack[i].display_type == PageType::Command {
-            let x = self.key_handler.screen_cols/4;
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+2, "Command 1".to_owned());
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+3, "Command 1".to_owned());
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+4, "Command 1".to_owned());
-            Screen::print_at_times(&mut stdout, x, y+5, "-", self.key_handler.screen_cols/2);
+            let x = self.key_handler.screen_cols / 4;
+            Screen::create_line(
+                &mut stdout,
+                self.key_handler.screen_cols / 2,
+                x,
+                y + 2,
+                "Command 1".to_owned(),
+            );
+            Screen::create_line(
+                &mut stdout,
+                self.key_handler.screen_cols / 2,
+                x,
+                y + 3,
+                "Command 1".to_owned(),
+            );
+            Screen::create_line(
+                &mut stdout,
+                self.key_handler.screen_cols / 2,
+                x,
+                y + 4,
+                "Command 1".to_owned(),
+            );
+            Screen::print_at_times(&mut stdout, x, y + 5, "-", self.key_handler.screen_cols / 2);
         }
     }
 
-    pub fn create_line(stdout : &mut std::io::Stdout, width : usize, x : usize, y : usize, text : String) {
+    pub fn create_line(
+        stdout: &mut std::io::Stdout,
+        width: usize,
+        x: usize,
+        y: usize,
+        text: String,
+    ) {
         Screen::clean_line(stdout, width, x, y);
-        Screen::print_at(stdout, x+2, y, &text);
+        Screen::print_at(stdout, x + 2, y, &text);
     }
 
-    pub fn clean_line(stdout : &mut std::io::Stdout, width : usize, x : usize, y : usize) {
+    pub fn clean_line(stdout: &mut std::io::Stdout, width: usize, x: usize, y: usize) {
         Screen::print_at(stdout, x, y, "| ");
-        Screen::print_at_times(stdout, x+2, y, " ", width-4);
+        Screen::print_at_times(stdout, x + 2, y, " ", width - 4);
         match stdout.queue(style::PrintStyledContent(" |".reset())) {
-            Ok(_) => {},
-            Err(_) => {},
+            Ok(_) => {}
+            Err(_) => {}
         }
     }
 
-    pub fn print_at(stdout : &mut std::io::Stdout, x : usize, y : usize, text : &str) {
+    pub fn print_at(stdout: &mut std::io::Stdout, x: usize, y: usize, text: &str) {
         Screen::print_at_times(stdout, x, y, text, 1);
     }
-    
 
-    pub fn print_at_times(stdout : &mut std::io::Stdout, x : usize, y : usize, text : &str, times : usize) {
+    pub fn print_at_times(
+        stdout: &mut std::io::Stdout,
+        x: usize,
+        y: usize,
+        text: &str,
+        times: usize,
+    ) {
         match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
-            Ok(_) => {},
-            Err(_) => {},
+            Ok(_) => {}
+            Err(_) => {}
         }
         for _i in 0..times {
             match stdout.queue(style::PrintStyledContent(text.reset())) {
-                Ok(_) => {},
-                Err(_) => {},
+                Ok(_) => {}
+                Err(_) => {}
             }
         }
     }
-    
     pub fn refresh_screen(&mut self) -> crossterm::Result<()> {
         self.key_handler.scroll();
         let mut stdout = stdout();
@@ -454,7 +513,10 @@ impl Screen {
         if !self.active().display_type.overwrites() {
             queue!(
                 stdout,
-                cursor::MoveTo((self.key_handler.screen_cols/6 + 2 + ip_x) as u16, (self.key_handler.screen_rows/2) as u16),
+                cursor::MoveTo(
+                    (self.key_handler.screen_cols / 6 + 2 + ip_x) as u16,
+                    (self.key_handler.screen_rows / 2) as u16
+                ),
                 cursor::Show
             )?;
         } else {
@@ -474,7 +536,7 @@ impl Screen {
 
 // Potential additions to screen
 // pub pub fn active_type(&self) -> PageType {
-pub struct ColorWord{
+pub struct ColorWord {
     word: Option<String>,
     disable: bool,
     red: Vec<String>,
@@ -488,10 +550,10 @@ pub struct ColorWord{
     parenthesis: usize,
     brackets: usize,
 }
-impl ColorWord{
+impl ColorWord {
     pub fn new(word: Option<String>, file_type: String) -> Self {
         let color_details = FileIO::get_highlights(file_type).unwrap();
-        Self{
+        Self {
             word: word,
             disable: false,
             red: color_details.0,
@@ -501,13 +563,20 @@ impl ColorWord{
             other: Vec::new(),
             in_text_2: false,
             in_text_1: false,
-            base_colors: vec![Color::Yellow, Color::Red, Color::Black, Color::Green, Color::Blue, Color::Magenta],
+            base_colors: vec![
+                Color::Yellow,
+                Color::Red,
+                Color::Black,
+                Color::Green,
+                Color::Blue,
+                Color::Magenta,
+            ],
             parenthesis: 0,
             brackets: 0,
         }
     }
-    
-    pub fn get_color(&mut self, word: &str) -> Color{
+
+    pub fn get_color(&mut self, word: &str) -> Color {
         if (word == "\"") & !self.in_text_1 {
             self.in_text_2 = !self.in_text_2;
             return Color::Magenta;
@@ -520,7 +589,7 @@ impl ColorWord{
             return Color::Magenta;
         }
         if word == "(" {
-            let output = self.base_colors[self.parenthesis%self.base_colors.len()];
+            let output = self.base_colors[self.parenthesis % self.base_colors.len()];
             self.parenthesis += 1;
             return output;
         }
@@ -528,10 +597,10 @@ impl ColorWord{
             if self.parenthesis > 0 {
                 self.parenthesis -= 1;
             }
-            return self.base_colors[self.parenthesis%self.base_colors.len()];
+            return self.base_colors[self.parenthesis % self.base_colors.len()];
         }
         if word == "{" {
-            let output = self.base_colors[self.brackets%self.base_colors.len()];
+            let output = self.base_colors[self.brackets % self.base_colors.len()];
             self.brackets += 1;
             return output;
         }
@@ -539,7 +608,7 @@ impl ColorWord{
             if self.brackets > 0 {
                 self.brackets -= 1;
             }
-            return self.base_colors[self.brackets%self.base_colors.len()];
+            return self.base_colors[self.brackets % self.base_colors.len()];
         }
         for w in &self.red {
             if word == w {
@@ -549,24 +618,23 @@ impl ColorWord{
         for w in &self.yellow {
             if word == w {
                 return Color::Yellow;
-    
             }
         }
         for w in &self.blue {
             if word == w {
-                return Color::Blue;                
+                return Color::Blue;
             }
         }
         // println!("{:?}", self.green);
         for w in &self.green {
             if word == w {
-                return Color::DarkGreen;                
+                return Color::DarkGreen;
             }
         }
         Color::Reset
     }
-    
-    pub fn get_background_color(&self, c : &str) -> Color {
+
+    pub fn get_background_color(&self, c: &str) -> Color {
         match &self.word {
             Some(color) => {
                 if c == color {
@@ -574,11 +642,10 @@ impl ColorWord{
                 } else {
                     Color::Reset
                 }
-            },
+            }
             None => Color::Reset,
         }
     }
-    
     pub fn coloring(&mut self, text: &str) {
         let mut stdout = stdout();
         // match stdout.queue(cursor::MoveTo(0,0)) {
@@ -589,19 +656,20 @@ impl ColorWord{
         //     Ok(_) => {},
         //     Err(_) => {},
         // };
-        let line:Vec<&str> = text.split("\r\n").collect();
-    
+        let line: Vec<&str> = text.split("\r\n").collect();
         for i in 0..line.len() {
             for word in split_up(line[i].to_owned()) {
                 // The actual printing part \/
-                match stdout.queue(style::PrintStyledContent(
-                    StyledContent::new(ContentStyle {
+                match stdout.queue(style::PrintStyledContent(StyledContent::new(
+                    ContentStyle {
                         foreground_color: Some(self.get_color(word.as_str())),
                         background_color: Some(self.get_background_color(word.as_str())),
-                        attributes : Attributes::default(),
-                    }, word))){
-                    Ok(_) => {},
-                    Err(_) => {},
+                        attributes: Attributes::default(),
+                    },
+                    word,
+                ))) {
+                    Ok(_) => {}
+                    Err(_) => {}
                 };
                 // match stdout.queue(style::PrintStyledContent(
                 //     " ".reset())){
@@ -609,38 +677,36 @@ impl ColorWord{
                 //     Err(_) => {},
                 // };
             }
-            if i != line.len()-1 {
-                match stdout.queue(style::PrintStyledContent(
-                    "\r\n".reset())){
-                    Ok(_) => {},
-                    Err(_) => {},
+            if i != line.len() - 1 {
+                match stdout.queue(style::PrintStyledContent("\r\n".reset())) {
+                    Ok(_) => {}
+                    Err(_) => {}
                 };
             }
         }
         match stdout.flush() {
-            Ok(_) => {},
-            Err(_) => {},
-        };       
-                    
-       
+            Ok(_) => {}
+            Err(_) => {}
+        };
     }
-    
 }
 
-
-fn split_up(input : String) -> Vec<String> {
-    return pop_off_these(vec![input], vec![" ", "(", ")", "{", "}", ".", ";", ":", "\"", "'", "[", "]"]);
+fn split_up(input: String) -> Vec<String> {
+    return pop_off_these(
+        vec![input],
+        vec![" ", "(", ")", "{", "}", ".", ";", ":", "\"", "'", "[", "]"],
+    );
 }
 
-fn pop_off_these(mut input : Vec<String>, items : Vec<&str>) -> Vec<String> {
+fn pop_off_these(mut input: Vec<String>, items: Vec<&str>) -> Vec<String> {
     for item in items {
         input = pop_off(input, item);
     }
     input
 }
 
-fn pop_off(input : Vec<String>, item : &str) -> Vec<String> {
-    let mut output : Vec<String> = Vec::new();
+fn pop_off(input: Vec<String>, item: &str) -> Vec<String> {
+    let mut output: Vec<String> = Vec::new();
     for i in input {
         let mut rest = i;
         while rest.contains(item) {

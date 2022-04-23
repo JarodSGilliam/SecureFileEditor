@@ -78,7 +78,6 @@ impl Page {
         self.contents.push_str(&style::Attribute::Reverse.to_string());
     }
     */
-
 }
 
 // Potential additions to page

@@ -1,9 +1,9 @@
-use unicode_truncate::UnicodeTruncateStr;
-use unicode_width::UnicodeWidthStr;
-use crossterm::event::KeyCode;
 use crate::insertion_point::*;
 use crate::page::*;
+use crossterm::event::KeyCode;
 use std::cmp;
+use unicode_truncate::UnicodeTruncateStr;
+use unicode_width::UnicodeWidthStr;
 
 /*
     Struct responsible for moving the user's (i)nsertion (p)oint while
@@ -11,7 +11,7 @@ use std::cmp;
 */
 // ip.x, ip.y indicates the index of cursor and use the screen_cols and rows to store the screen size
 pub struct KeyHandler {
-    pub ip : InsertionPoint,
+    pub ip: InsertionPoint,
     pub screen_cols: usize,
     pub screen_rows: usize,
     pub bytes_in_row: Vec<usize>,
@@ -24,7 +24,7 @@ impl KeyHandler {
     //create new KeyHandler with insertion point at origin (top-left corner)
     pub fn new(window_size: (usize, usize)) -> KeyHandler {
         KeyHandler {
-            ip : InsertionPoint::new(),
+            ip: InsertionPoint::new(),
             screen_cols: window_size.0,
             screen_rows: window_size.1,
             bytes_in_row: Vec::new(),

@@ -1,6 +1,6 @@
 use std::io::{stdout, BufRead, Write};
-use std::{cmp, fs, io, thread, time};
 use std::path::Path;
+use std::{cmp, fs, io, thread, time};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::style::*;
@@ -14,15 +14,15 @@ use unicode_width::UnicodeWidthStr;
 
 use syntect::parsing::SyntaxSet;
 
-pub mod page;
+pub mod file_io;
 pub mod insertion_point;
 pub mod key_handler;
-pub mod file_io;
+pub mod page;
 pub mod screen;
 
 use file_io::FileIO;
-use screen::*;
 use page::*;
+use screen::*;
 
 //use device_query::{DeviceQuery, DeviceState, Keycode};
 
@@ -39,8 +39,8 @@ fn main() {
     match opened_file_path.clone() {
         Some(string) => {
             extension = get_extension(string);
-        }, 
-        None => {},
+        }
+        None => {}
     }
 
     let mut save_as_warned = false;
@@ -48,11 +48,10 @@ fn main() {
     //println!("extension: {}", extension);
     //let mut builder = SyntaxSetBuilder::new();
     let s_set = SyntaxSet::load_defaults_newlines();
-    let syntax = s_set.find_syntax_by_extension(extension.as_str())
+    let syntax = s_set
+        .find_syntax_by_extension(extension.as_str())
         .unwrap_or_else(|| s_set.find_syntax_plain_text()); //load plaintext syntax if extension does not yield another valid syntax
     println!("{}", syntax.name);
-    
-    
     // Setup
     match crossterm::terminal::enable_raw_mode() {
         Ok(_a) => {}
@@ -62,7 +61,6 @@ fn main() {
     let mut screen: Screen = Screen::new(opened_file_path.clone());
     // Counts the number of operations that have been executed since the last autosave or file opening
     let mut operations: usize = 0;
-    
     // Creates a stack of screens
     // Creates the screen for interacting with the file
     screen.push(Page::new_with_contents(
@@ -86,7 +84,8 @@ fn main() {
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
-        match screen.refresh_screen() { //the_text_that_is_being_searched_for.as_str()
+        match screen.refresh_screen() {
+            //the_text_that_is_being_searched_for.as_str()
             Ok(_) => {}
             Err(e) => eprint!("{}", e),
         };
@@ -143,7 +142,6 @@ fn main() {
                     }
 
                     screen.mode = Mode::Normal;
-                    
                 }
 
                 KeyEvent {
@@ -151,7 +149,10 @@ fn main() {
                     code: KeyCode::Right,
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    if (screen.find_mode()) && coordinates.len() > 0 && (point < coordinates.len() - 1) {
+                    if (screen.find_mode())
+                        && coordinates.len() > 0
+                        && (point < coordinates.len() - 1)
+                    {
                         point += 1;
                         screen.key_handler.ip.x = coordinates[point].0;
                         screen.key_handler.ip.y = coordinates[point].1;
@@ -233,7 +234,6 @@ fn main() {
                             screen.insertion(KeyCode::Enter);
                             continue;
                         }
-                        
                         PageType::SaveAs => {
                             screen.mode = Mode::SaveAs(screen.active().contents.clone());
                             match screen.search_text() {
@@ -242,29 +242,33 @@ fn main() {
                                     let new_text: &String = &screen.text_page().contents;
                                     //println!("new_text: {}", new_text);
 
-                                    if (!Path::new(pathname.as_str()).exists() | save_as_warned) {   //if the specified filename does not already exist
+                                    if (!Path::new(pathname.as_str()).exists() | save_as_warned) {
+                                        //if the specified filename does not already exist
                                         match FileIO::overwrite_to_file(&pathname, new_text) {
                                             Ok(_) => {
                                                 screen.file_name = Some(pathname.clone());
                                                 screen.reset_prompt();
                                                 screen.pop();
                                                 save_as_warned = false;
-                                            },
-                                            Err(e) => eprint!("Failed to save as new file due to error {}", e),
+                                            }
+                                            Err(e) => eprint!(
+                                                "Failed to save as new file due to error {}",
+                                                e
+                                            ),
                                         }
                                     } else {
                                         screen.active_mut().set_prompt(String::from("Warning: File Already Exists, Press Enter to Overwrite or choose new file name"));
                                         save_as_warned = true;
                                     }
-                                },
+                                }
 
-                                None => {   //if user did not enter text to save the file under
+                                None => {
+                                    //if user did not enter text to save the file under
                                     screen.pop();
                                     save_as_warned = false;
-                                },
-                           }
+                                }
+                            }
                         }
-
 
                         PageType::Find => {
                             screen.mode = Mode::Find(screen.active().contents.clone());
@@ -273,16 +277,20 @@ fn main() {
                                 screen.search_text().unwrap()
                             );
                             // screen.mode = Mode::Find(the_text_that_is_being_searched_for);
-                            let number_found = screen.text_page().contents.matches(&screen.search_text().unwrap()).count();
+                            let number_found = screen
+                                .text_page()
+                                .contents
+                                .matches(&screen.search_text().unwrap())
+                                .count();
                             if number_found > 1 {
                                 screen.text_page_mut().set_prompt(format!(
                                     "Found {} matches: (Ctrl + Left for previous, Ctrl + Right for next, ESC to exit find mode)",
                                     number_found
                                 ));
                             } else if number_found == 1 {
-                                screen.text_page_mut().set_prompt(format!(
-                                    "Found 1 match: (ESC to exit find mode)",
-                                ));
+                                screen
+                                    .text_page_mut()
+                                    .set_prompt(format!("Found 1 match: (ESC to exit find mode)",));
                             } else {
                                 screen.text_page_mut().set_prompt(format!(
                                     "Found no matches: (Try searching for something else, ESC to exit find mode)",
@@ -303,13 +311,10 @@ fn main() {
                                 &screen.search_text().unwrap(),
                                 number_found,
                             ); //list of indices where find text occurs
-                            coordinates =
-                                get_xs_and_ys(indices, &screen.active().contents); //list of (x, y) pairs for moving the cursor
+                            coordinates = get_xs_and_ys(indices, &screen.active().contents); //list of (x, y) pairs for moving the cursor
 
-                            let (res1, res2) = find_text(
-                                screen.text_page(),
-                                &screen.search_text().unwrap(),
-                            );
+                            let (res1, res2) =
+                                find_text(screen.text_page(), &screen.search_text().unwrap());
                             match res1 {
                                 Some(_t) => {
                                     //if res1 is not a None, then at least one occurrence was found
@@ -374,7 +379,9 @@ fn main() {
                             // screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str());
                             screen.pop();
                             screen.add(PageType::ReplaceP2);
-                            screen.active_mut().set_prompt(String::from("Replace P2:\nReplace:"));
+                            screen
+                                .active_mut()
+                                .set_prompt(String::from("Replace P2:\nReplace:"));
                             println!("{}", screen.search_text().unwrap());
                             if screen.find_mode() {
                                 // screen.text_page_mut().set_prompt(String::from(""));
@@ -393,15 +400,17 @@ fn main() {
                                 Mode::Normal => break,
                                 Mode::Find(_) => break,
                                 Mode::Replace(t) => t,
-                                Mode::SaveAs(t) => break
-                            }.clone();
-                            screen.text_page_mut().contents =
-                                screen.text_page_mut().contents.replace(
-                                    temp007.as_str(),
-                                    to_replace.as_str(),
-                                );
+                                Mode::SaveAs(t) => break,
+                            }
+                            .clone();
+                            screen.text_page_mut().contents = screen
+                                .text_page_mut()
+                                .contents
+                                .replace(temp007.as_str(), to_replace.as_str());
                             screen.pop();
-                            screen.text_page_mut().set_prompt(String::from("Replaced here:"));
+                            screen
+                                .text_page_mut()
+                                .set_prompt(String::from("Replaced here:"));
                             screen.mode = Mode::Replace(to_replace.clone());
                             // for
                             println!("{}", to_replace);
@@ -442,7 +451,9 @@ fn main() {
                     if screen.page_stack.len() == 1 {
                         // find_display
                         screen.add(PageType::Find);
-                        screen.active_mut().set_prompt(String::from("Text to find:"));
+                        screen
+                            .active_mut()
+                            .set_prompt(String::from("Text to find:"));
 
                         /*
                             At this point we want to get the user's input for the text they'd like to find.
@@ -474,7 +485,9 @@ fn main() {
                 } => {
                     if screen.page_stack.len() == 1 {
                         screen.add(PageType::ReplaceP1);
-                        screen.active_mut().set_prompt(String::from("Replace P1:\nFind:"));
+                        screen
+                            .active_mut()
+                            .set_prompt(String::from("Replace P1:\nFind:"));
                     }
                     if screen.find_mode() {
                         // screen.text_page_mut().set_prompt(String::from(""));
@@ -527,10 +540,7 @@ fn main() {
         } else {
             operations = 0;
             if AUTOSAVE {
-                FileIO::auto_save(
-                    &opened_file_path,
-                    &screen.text_page().contents,
-                );
+                FileIO::auto_save(&opened_file_path, &screen.text_page().contents);
             }
         }
 
@@ -638,7 +648,7 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
                 //println!("iterating on {}", c);
                 if (total + i) == position {
                     // let s=disp.row_contents.get(y_val).unwrap();
-                    let t=line.unicode_truncate(line[..i].width());
+                    let t = line.unicode_truncate(line[..i].width());
                     x_val = t.1;
                     break 'outer;
                 }
@@ -659,7 +669,7 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
 fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
     let mut new_str = contents.clone();
     let mut res_vec = Vec::new();
-    let mut c:char='\0';
+    let mut c: char = '\0';
     while res_vec.len() < count {
         match new_str.find(text) {
             Some(t) => {
@@ -674,7 +684,7 @@ fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
                 }
                 //res_vec.push(t);
                 new_str = new_str.split_at(t).1.to_string();
-                c=new_str.remove(0);
+                c = new_str.remove(0);
                 //println!("new_str_: {}", new_str);
             }
             None => {}
@@ -767,7 +777,6 @@ impl EachRowContent {
 // highlight the search result
 // syntax highlight function // not used in version2
 
-
 enum HighLight {
     Normal,
     Number,
@@ -776,7 +785,7 @@ enum HighLight {
 
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
-    fn match_type(&self, page: & Page) -> HighLight;
+    fn match_type(&self, page: &Page) -> HighLight;
     // fn color_row(&self, render: &str, highlight: &[HighLight], temp:&mut String) {
     //     render.chars().enumerate().for_each(|(i, c)| {
     //         let _ = execute!(stdout(), SetForegroundColor(self.set_color(&highlight[i])));
@@ -808,7 +817,6 @@ macro_rules! highlight_struct {
     ) => {
         struct $Name;
 
-
         impl ColorContent for $Name {
             fn set_color(&self, highlight_type: &HighLight) -> Color {
                 match highlight_type {
@@ -817,20 +825,17 @@ macro_rules! highlight_struct {
                 }
             }
 
-            fn match_type(&self, page: &Page ) -> HighLight {
+            fn match_type(&self, page: &Page) -> HighLight {
                 let row = page.row_contents;
                 let chars = row.chars();
                 for c in chars {
-                    if c.is_digit(10){
+                    if c.is_digit(10) {
                         HighLight::Number;
-
                     } else {
                         HighLight::Normal;
                     }
                 }
-
             }
         }
-
     };
 }
