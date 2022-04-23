@@ -90,7 +90,7 @@ impl Screen {
     pub fn reset_prompt(&mut self) {
         let name = match &self.file_name {
             Some(t) => t.clone(),
-            None => String::new(),
+            None => String::from("Unsaved File"),
         };
         self.text_page_mut().set_prompt(name);
     }
