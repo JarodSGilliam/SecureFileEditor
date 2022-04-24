@@ -19,7 +19,9 @@ pub mod insertion_point;
 pub mod key_handler;
 pub mod file_io;
 pub mod screen;
+pub mod language;
 
+use language::Language;
 use file_io::FileIO;
 use screen::*;
 use page::*;
