@@ -21,7 +21,6 @@ pub mod file_io;
 pub mod screen;
 pub mod language;
 
-use language::Language;
 use file_io::FileIO;
 use screen::*;
 use page::*;
@@ -61,7 +60,7 @@ fn main() {
         Err(e) => eprint!("{}", e),
     };
     //Creates the screen on which everything is displayed
-    let mut screen: Screen = Screen::new(opened_file_path.clone());
+    let mut screen: Screen = Screen::new(opened_file_path.clone(), extension);
     // Counts the number of operations that have been executed since the last autosave or file opening
     let mut operations: usize = 0;
     
@@ -75,7 +74,7 @@ fn main() {
 
     // let mut the_text_that_is_being_searched_for = String::new();
 
-    let mut indices: Vec<usize> = Vec::new(); //list of indices where find text occurs
+    let mut indices: Vec<usize>;// = Vec::new(); //list of indices where find text occurs
     let mut coordinates: Vec<(usize, usize)> = Vec::new(); //list of x,y pairs for the cursor after find
     let mut point = 0; //used to traverse found instances
 
@@ -244,13 +243,16 @@ fn main() {
                                     let new_text: &String = &screen.text_page().contents;
                                     //println!("new_text: {}", new_text);
 
-                                    if (!Path::new(pathname.as_str()).exists() | save_as_warned) {   //if the specified filename does not already exist
+                                    if !Path::new(pathname.as_str()).exists() | save_as_warned {   //if the specified filename does not already exist
                                         match FileIO::overwrite_to_file(&pathname, new_text) {
                                             Ok(_) => {
                                                 screen.file_name = Some(pathname.clone());
                                                 screen.reset_prompt();
                                                 screen.pop();
                                                 save_as_warned = false;
+                                                println!("{}", get_extension(pathname.clone()));
+                                                screen.color_struct = Screen::get_color_struct(get_extension(pathname.clone()));
+                                                println!("{:?}", screen.color_struct.language);
                                             },
                                             Err(e) => eprint!("Failed to save as new file due to error {}", e),
                                         }
@@ -317,7 +319,7 @@ fn main() {
                                     //if res1 is not a None, then at least one occurrence was found
                                     screen.key_handler.ip.x = res1.unwrap();
                                     screen.key_handler.ip.y = res2.unwrap();
-                                    let mut point = 0;
+                                    // let mut point = 0;
                                     // highlight the searching results
                                     // (_t.._t + the_text_that_is_being_searched_for.len())
                                     // .for_each(|_t| rendercontent.highlight[_t] = HighLight::Search);
@@ -395,7 +397,7 @@ fn main() {
                                 Mode::Normal => break,
                                 Mode::Find(_) => break,
                                 Mode::Replace(t) => t,
-                                Mode::SaveAs(t) => break
+                                Mode::SaveAs(_t) => break
                             }.clone();
                             screen.text_page_mut().contents =
                                 screen.text_page_mut().contents.replace(

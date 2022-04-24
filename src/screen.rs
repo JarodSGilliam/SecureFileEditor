@@ -13,9 +13,9 @@ use crate::language::Language;
 
 
 use crossterm::{
-    ExecutableCommand, QueueableCommand,
-    style::{self, Stylize}, Result
-};
+    QueueableCommand,
+    style::{self, Stylize},
+}; //ExecutableCommand, Result
 
 
 #[derive(PartialEq)]
@@ -47,19 +47,31 @@ pub struct Screen {
     pub mode: Mode,
     pub file_name: Option<String>,
     pub modified: bool,
+    pub color_struct : ColorWord,
 }
 impl Screen {
-    pub fn new(file_name : Option<String>) -> Self {
+    pub fn new(file_name : Option<String>, extension : String) -> Self {
         let screen_size = terminal::size()
             .map(|(x, y)| (x as usize, y as usize))
             .unwrap();
+        println!("{}", extension);
         Self {
             page_stack:  Vec::new(),
             key_handler: KeyHandler::new(screen_size),
             mode: Mode::Normal,
             file_name,
             modified: false,
+            color_struct: Screen::get_color_struct(extension),
         }
+    }
+
+    pub fn get_color_struct(extension : String) -> ColorWord {
+        let language = FileIO::get_highlights(extension.to_owned());
+        let color = ColorWord::new(None, match language {
+            Some(l) => l,
+            None => Language::new("".to_owned()),
+        });
+        color
     }
 
     pub fn find_mode(&self) -> bool {
@@ -313,9 +325,9 @@ impl Screen {
                 Err(_) => {},
             }
         }
-        let mut color = ColorWord::new(temp01, String::from("rs"));
         let text: &str = &content.clone()[..];
-        color.coloring(text);
+        self.color_struct.set_find(temp01);
+        self.color_struct.coloring(text);
         // queue!(stdout(), Print(content)).unwrap();
         // return;
         if !on_screen.display_type.overwrites() {
@@ -474,7 +486,7 @@ impl Screen {
 pub struct ColorWord{
     word: Option<String>,
     disabled: bool,
-    language: Language,
+    pub language: Language,
     in_text_2: bool,
     in_text_1: bool,
     base_colors: Vec<Color>,
@@ -482,18 +494,11 @@ pub struct ColorWord{
     brackets: usize,
 }
 impl ColorWord{
-    pub fn new(word: Option<String>, file_type: String) -> Self {
-        let language = FileIO::get_highlights(file_type);
+    pub fn new(word: Option<String>, language: Language) -> Self {
         Self{
             word: word,
-            disabled: match language {
-                Some(_) => false,
-                None => true,
-            },
-            language: match language {
-                Some(l) => l,
-                None => Language::new("".to_owned()),
-            },
+            disabled: false,
+            language: language,
             in_text_2: false,
             in_text_1: false,
             base_colors: vec![Color::Yellow, Color::Red, Color::Black, Color::Green, Color::Blue, Color::Magenta],
@@ -506,14 +511,14 @@ impl ColorWord{
         // Colors all words in single or double quotes the same
         if (word == "\"") & !self.in_text_1 {
             self.in_text_2 = !self.in_text_2;
-            return Color::Magenta;
+            return self.language.text_color;
         }
         if (word == "\'") & !self.in_text_2 {
             self.in_text_1 = !self.in_text_1;
-            return Color::Magenta;
+            return self.language.text_color;
         }
         if self.in_text_2 || self.in_text_1 {
-            return Color::Magenta;
+            return self.language.text_color;
         }
         // Does parenthesis and bracket coloring
         if word == "(" {
@@ -539,7 +544,10 @@ impl ColorWord{
             return self.base_colors[self.brackets%self.base_colors.len()];
         }
         // Applies color based on highlighting.txt
-        let output = self.language.get_color(&word.to_owned());
+        match self.language.get_color(&word.to_owned()) {
+            Some(c) => {return c;},
+            None => {}
+        }
         // for w in &self.red {
         //     if word == w {
         //         return Color::Red;
@@ -564,14 +572,18 @@ impl ColorWord{
         // Colors all numbers the same
         let first = word.chars().next().unwrap();
         if first.is_numeric() {
-            return Color::Rgb{r:100, g:255, b:100}
+            return self.language.numbers_color
         }
         // Colors all uppercase words the same
         if first.is_uppercase() {
-            return Color::Rgb{r:100, g:255, b:255}
+            return self.language.capitals_color
         }
         // Colors all other words the default
-        output
+        Color::Reset
+    }
+    
+    pub fn set_find(&mut self, find : Option<String>) {
+        self.word = find;
     }
     
     // Highlights the word which is currently being searched for (if there is one)
@@ -590,9 +602,6 @@ impl ColorWord{
     
     // Prints the given text with the correct colors
     pub fn coloring(&mut self, text: &str) {
-        let comment_text : &str = "//";
-        let open_multi_line_comment_text : &str = "/*";
-        let close_multi_line_comment_text : &str = "*/";
         let mut stdout = stdout();
         let line:Vec<&str> = text.split("\r\n").collect();
         let mut multi_line_comment : bool = false;
@@ -600,9 +609,9 @@ impl ColorWord{
             let words : Vec<String> = split_up(line[i].to_owned());
             let mut comment : bool = false;
             for i in 0..words.len() {
-                if words[i] == comment_text {
+                if words[i] == self.language.comment_keyword {
                     comment = true;
-                } else if words[i] == open_multi_line_comment_text {
+                } else if words[i] == self.language.ml_comment_start_keyword {
                     multi_line_comment = true;
                 }
                 // The actual printing part \/
@@ -625,7 +634,7 @@ impl ColorWord{
                     Ok(_) => {},
                     Err(_) => {},
                 };
-                if words[i] == close_multi_line_comment_text {
+                if words[i] == self.language.ml_comment_end_keyword {
                     multi_line_comment = false;
                 }
             }
@@ -647,7 +656,7 @@ impl ColorWord{
 
 // Cals pop_off_these for all the nessisary strings
 fn split_up(input : String) -> Vec<String> {
-    return pop_off_these(vec![input], vec![" ", "(", ")", "{", "}", ".", ";", ":", "\"", "'", "[", "]", "//", "*/", "*/", "<?-", "->", "#"]);
+    return pop_off_these(vec![input], vec![" ", "(", ")", "{", "}", ".", ";", ":", "\"", "'", "[", "]", "//", "*/", "*/", "<?-", "->", "#", ","]);
 }
 
 // Calls pop_off over the entire given string
