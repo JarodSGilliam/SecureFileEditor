@@ -1,6 +1,10 @@
 use chrono::{DateTime, Local};
+<<<<<<< HEAD
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, ErrorKind, Read, Write};
+=======
+use crate::language::Language;
+>>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
 
 // Deals with all the reading and writing to the file
 pub struct FileIO;
@@ -185,16 +189,21 @@ impl FileIO {
         }
     }
 
+<<<<<<< HEAD
     pub fn get_highlights(
         file_type: String,
     ) -> Option<(Vec<String>, Vec<String>, Vec<String>, Vec<String>)> {
+=======
+    pub fn get_highlights(file_type : String) -> Option<Language> {
+>>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
         if file_type == "" {
             return None;
         }
-        let info = FileIO::get_file_contents(&Some(String::from("highlighting.txt")));
-        if info == "" {
+        let lines : Vec<String> = FileIO::get_file_contents(&Some(String::from("highlighting.txt"))).split("\n").map(|x| x.trim().to_owned()).collect();
+        if lines.len() == 0 {
             return None;
         }
+<<<<<<< HEAD
         let lines: Vec<&str> = info.split("\n").collect();
         for i in 0..((lines.len() + 1) / 10) {
             // println!("{}", lines[i*10]);
@@ -218,6 +227,22 @@ impl FileIO {
                         .map(|x| String::from(x.trim()))
                         .collect();
                     return Some((red, blue, green, yellow));
+=======
+        for i in 0..lines.len() {
+            if match lines[i].split_once(" "){Some(t) => t, None => ("","")}.0 != "!" {
+                continue;
+            }
+            for a in lines[i].split(" ").map(|x| x.trim()) {
+                if a.trim() == file_type {
+                    let mut related : String = String::new();
+                    let mut n = i+1;
+                    while n < lines.len() && match lines[n].split_once(" "){Some(s) => s, None => ("","")}.0 != "!" {
+                        related += &lines[n];
+                        related += "\n";
+                        n += 1;
+                    }
+                    return Some(Language::new(related));
+>>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
                 }
             }
         }

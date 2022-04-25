@@ -2,8 +2,13 @@ use crate::insertion_point::*;
 use crate::page::*;
 use crossterm::event::KeyCode;
 use std::cmp;
+<<<<<<< HEAD
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
+=======
+use std::io::Write;
+use std::io;
+>>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
 
 /*
     Struct responsible for moving the user's (i)nsertion (p)oint while
@@ -23,16 +28,23 @@ pub struct KeyHandler {
 impl KeyHandler {
     //create new KeyHandler with insertion point at origin (top-left corner)
     pub fn new(window_size: (usize, usize)) -> KeyHandler {
+<<<<<<< HEAD
         KeyHandler {
             ip: InsertionPoint::new(),
+=======
+        let instance = KeyHandler {
+            ip : InsertionPoint::new(),
+>>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
             screen_cols: window_size.0,
-            screen_rows: window_size.1,
+            screen_rows: window_size.1-2,
             bytes_in_row: Vec::new(),
             width_in_row: Vec::new(),
             num_of_rows: 0,
             row_offset: 0,
             column_offset: 0,
-        }
+        };
+        //println!("x:{} y:{}", instance.ip.x, instance.ip.y);
+        return instance;
     }
 
     //check cursor position when scroll
@@ -132,6 +144,8 @@ impl KeyHandler {
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), c);
                 on_screen.row_contents = split_with_n(&on_screen.contents);
+                //println!("\ninsertion b_i_r len: {}", self.bytes_in_row.len());
+                //println!("\ninsertion ip x: {}, y: {}", self.ip.x, self.ip.y);
                 self.bytes_in_row[self.ip.y] += c.to_string().len();
                 self.ip.x += 1;
                 let (_, mut w) = on_screen
@@ -230,11 +244,16 @@ impl KeyHandler {
             }
 
             KeyCode::Enter => {
+                //println!("start_Enter b_i_r len: {}", self.bytes_in_row.len());
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), '\n');
                 self.bytes_in_row
                     .insert(self.ip.y + 1, self.bytes_in_row[self.ip.y] - self.ip.x);
+                io::stdout().flush();
+                //println!("Enter b_i_r len: {}", self.bytes_in_row.len());
+                //println!("Enter ip x: {}, ip y: {}", self.ip.x, self.ip.y);
+                //io::stdout().flush();
                 self.bytes_in_row[self.ip.y] = self.ip.x + 1;
                 self.ip.x = 0;
                 self.ip.y += 1;
@@ -249,11 +268,10 @@ impl KeyHandler {
         for i in 0..self.ip.y {
             x += self.bytes_in_row[i];
         }
-        let (s, _) = on_screen
-            .row_contents
-            .get(self.ip.y)
-            .unwrap()
-            .unicode_truncate(self.ip.x);
+        let (s, _) = match on_screen.row_contents.get(self.ip.y) {
+            Some(s) => s,
+            None => "", // is this right?
+        }.unicode_truncate(self.ip.x);
         x += s.replace('\n', "").len();
         x
     }
