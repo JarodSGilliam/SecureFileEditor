@@ -249,11 +249,10 @@ impl KeyHandler {
         for i in 0..self.ip.y {
             x += self.bytes_in_row[i];
         }
-        let (s, _) = on_screen
-            .row_contents
-            .get(self.ip.y)
-            .unwrap()
-            .unicode_truncate(self.ip.x);
+        let (s, _) = match on_screen.row_contents.get(self.ip.y) {
+            Some(s) => s,
+            None => "", // is this right?
+        }.unicode_truncate(self.ip.x);
         x += s.replace('\n', "").len();
         x
     }

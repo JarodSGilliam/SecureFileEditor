@@ -297,8 +297,6 @@ impl Screen {
             self.print_overlay(i, content);
             return;
         }
-        if !on_screen.display_type.overwrites() {
-        }
         match stdout.queue(cursor::MoveTo(x as u16, y as u16)) {
             Ok(_) => {},
             Err(_) => {},
@@ -619,25 +617,41 @@ impl ColorWord{
                     multi_line_comment = true;
                 }
                 // The actual printing part \/
-                match stdout.queue(style::PrintStyledContent(
-                    StyledContent::new(ContentStyle {
-                        foreground_color: Some({    
-                            if self.disabled {
-                                Color::Reset
-                            } else if comment || multi_line_comment {
-                                Color::Rgb{r:0,g:255,b:0}
-                            } else if i < words.len()-1 && words[i] != "(" && words[i+1] == "(" {
-                                Color::Rgb{r:255,g:150,b:0}
-                            } else {
-                                self.get_color(words[i].as_str())
-                            }
-                        }),
-                        background_color: Some(self.get_background_color(words[i].as_str())),
-                        attributes : Attributes::default(),
-                    }, &words[i]))){
-                    Ok(_) => {},
-                    Err(_) => {},
-                };
+                let foreground_color = Some({
+                    if self.disabled {
+                        Color::Reset
+                    } else if comment || multi_line_comment {
+                        Color::Rgb{r:0,g:255,b:0}
+                    } else if i < words.len()-1 && words[i] != "(" && words[i+1] == "(" {
+                        Color::Rgb{r:255,g:150,b:0}
+                    } else {
+                        self.get_color(words[i].as_str())
+                    }
+                });
+                if self.word == None {
+                    match stdout.queue(style::PrintStyledContent(
+                        StyledContent::new(ContentStyle {
+                            foreground_color: foreground_color,
+                            background_color: Some(self.get_background_color(words[i].as_str())),
+                            attributes : Attributes::default(),
+                        }, &words[i]))){
+                        Ok(_) => {},
+                        Err(_) => {},
+                    };
+                } else {
+                    let temp01 = pop_off(vec![words[i].clone()], self.word.clone().unwrap().as_str());
+                    for w in temp01 {
+                        match stdout.queue(style::PrintStyledContent(
+                            StyledContent::new(ContentStyle {
+                                foreground_color: foreground_color,
+                                background_color: Some(self.get_background_color(w.as_str())),
+                                attributes : Attributes::default(),
+                            }, &w))){
+                            Ok(_) => {},
+                            Err(_) => {},
+                        };
+                    }
+                }
                 if words[i] == self.language.ml_comment_end_keyword {
                     multi_line_comment = false;
                 }
