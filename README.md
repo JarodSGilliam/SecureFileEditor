@@ -41,8 +41,8 @@ Crates used:
    - unicode-truncate = "0.2.0"
 
 ## V3
-(Set to release ??/??/2022)
-For the final release, the team will focus on ironing out issues with previous releases and implementing other advanced features which are quality of life improvementslike  syntax highlighting and keyboard shortcuts.
+(Set to release 4/26/2022)
+For the final release, the team will focus on ironing out issues with previous releases and implementing other advanced features which are quality of life improvements like syntax highlighting and keyboard shortcuts.
 * [ ] Keyboard Shortcuts
 * [ ] Command Line
 * [ ] Syntax Highlighting
