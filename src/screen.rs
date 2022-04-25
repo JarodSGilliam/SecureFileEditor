@@ -414,9 +414,9 @@ impl Screen {
 
         if self.page_stack[i].display_type == PageType::Command {
             let x = self.key_handler.screen_cols/4;
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+2, "Command 1".to_owned());
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+3, "Command 1".to_owned());
-            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+4, "Command 1".to_owned());
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+2, "Toggle Highlight".to_owned());
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+3, "Find".to_owned());
+            Screen::create_line(&mut stdout, self.key_handler.screen_cols/2, x, y+4, "File Info".to_owned());
             Screen::print_at_times(&mut stdout, x, y+5, "-", self.key_handler.screen_cols/2);
         }
     }

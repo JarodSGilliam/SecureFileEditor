@@ -284,11 +284,12 @@ fn main() {
                                     if (string.eq(&toggle)) | (string.eq(&toggle_lower)) {
                                         println!("{}", string);
                                     } else if (string.eq(&find)) | (string.eq(&find_lower)) {
-
+                                        screen.pop();
+                                        trigger_find(&mut screen);
                                     } else if (string.eq(&info)) | (string.eq(&info_lower)) {
 
                                     } else {
-
+                                        screen.pop();
                                     }
                                 },
 
@@ -571,6 +572,18 @@ fn main() {
         //render to user save question
     }
     // EXIT
+}
+
+fn trigger_find(scr: &mut Screen) {
+   if scr.page_stack.len() == 1 {
+        scr.add(PageType::Find);
+        scr.active_mut().set_prompt(String::from("Text to Find"));
+   }
+
+   if scr.find_mode() {
+        scr.reset_prompt();
+   }
+   scr.mode = Mode::Normal;
 }
 
 /*
