@@ -4,6 +4,8 @@ use crossterm::event::KeyCode;
 use crate::insertion_point::*;
 use crate::page::*;
 use std::cmp;
+use std::io::Write;
+use std::io;
 
 /*
     Struct responsible for moving the user's (i)nsertion (p)oint while
@@ -23,7 +25,7 @@ pub struct KeyHandler {
 impl KeyHandler {
     //create new KeyHandler with insertion point at origin (top-left corner)
     pub fn new(window_size: (usize, usize)) -> KeyHandler {
-        KeyHandler {
+        let instance = KeyHandler {
             ip : InsertionPoint::new(),
             screen_cols: window_size.0,
             screen_rows: window_size.1,
@@ -32,7 +34,9 @@ impl KeyHandler {
             num_of_rows: 0,
             row_offset: 0,
             column_offset: 0,
-        }
+        };
+        //println!("x:{} y:{}", instance.ip.x, instance.ip.y);
+        return instance;
     }
 
     //check cursor position when scroll
@@ -132,6 +136,8 @@ impl KeyHandler {
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), c);
                 on_screen.row_contents = split_with_n(&on_screen.contents);
+                //println!("\ninsertion b_i_r len: {}", self.bytes_in_row.len());
+                //println!("\ninsertion ip x: {}, y: {}", self.ip.x, self.ip.y);
                 self.bytes_in_row[self.ip.y] += c.to_string().len();
                 self.ip.x += 1;
                 let (_, mut w) = on_screen
@@ -230,11 +236,16 @@ impl KeyHandler {
             }
 
             KeyCode::Enter => {
+                //println!("start_Enter b_i_r len: {}", self.bytes_in_row.len());
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), '\n');
                 self.bytes_in_row
                     .insert(self.ip.y + 1, self.bytes_in_row[self.ip.y] - self.ip.x);
+                io::stdout().flush();
+                //println!("Enter b_i_r len: {}", self.bytes_in_row.len());
+                //println!("Enter ip x: {}, ip y: {}", self.ip.x, self.ip.y);
+                //io::stdout().flush();
                 self.bytes_in_row[self.ip.y] = self.ip.x + 1;
                 self.ip.x = 0;
                 self.ip.y += 1;
