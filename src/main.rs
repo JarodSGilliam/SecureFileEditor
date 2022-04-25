@@ -188,6 +188,7 @@ fn main() {
                 } => {
                     screen.add(PageType::Command);
                     // screen.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+                    screen.mode = Mode::Normal;
                 }
 
                 // Events that move the cursor
@@ -267,6 +268,34 @@ fn main() {
                                     save_as_warned = false;
                                 },
                            }
+                        }
+
+                        PageType::Command => {
+                            screen.mode = Mode::Command(screen.active().contents.clone());
+                            match screen.search_text() {
+                                Some(string) => {
+                                    let toggle = String::from("Toggle Highlight");
+                                    let toggle_lower = String::from("toggle highlight");
+                                    let find = String::from("Find");
+                                    let find_lower = String::from("find");
+                                    let info = String::from("File Info");
+                                    let info_lower = String::from("file info");
+
+                                    if (string.eq(&toggle)) | (string.eq(&toggle_lower)) {
+                                        println!("{}", string);
+                                    } else if (string.eq(&find)) | (string.eq(&find_lower)) {
+
+                                    } else if (string.eq(&info)) | (string.eq(&info_lower)) {
+
+                                    } else {
+
+                                    }
+                                },
+
+                                None => {
+
+                                }
+                            }
                         }
 
 
@@ -397,7 +426,8 @@ fn main() {
                                 Mode::Normal => break,
                                 Mode::Find(_) => break,
                                 Mode::Replace(t) => t,
-                                Mode::SaveAs(_t) => break
+                                Mode::SaveAs(_t) => break,
+                                Mode::Command(t) => break,
                             }.clone();
                             screen.text_page_mut().contents =
                                 screen.text_page_mut().contents.replace(
