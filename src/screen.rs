@@ -510,6 +510,18 @@ impl ColorWord{
             brackets: 0,
         }
     }
+
+/*
+ *  This function toggles the instance's disabled boolean
+ *  for the command line.
+ */
+
+    pub fn toggle_status(&mut self) {
+        match self.disabled {
+            true => self.disabled = false,
+            false => self.disabled = true,
+        }
+    }
     
     pub fn get_color(&mut self, word: &str) -> Color{
         // Colors all words in single or double quotes the same

@@ -281,13 +281,15 @@ fn main() {
                                     let info = String::from("File Info");
                                     let info_lower = String::from("file info");
 
-                                    if (string.eq(&toggle)) | (string.eq(&toggle_lower)) {
-                                        println!("{}", string);
-                                    } else if (string.eq(&find)) | (string.eq(&find_lower)) {
+                                    if (string.eq(&toggle)) | (string.eq(&toggle_lower)) { //toggle
+                                        screen.pop();
+                                        screen.color_struct.toggle_status();
+                                    } else if (string.eq(&find)) | (string.eq(&find_lower)) { //find
                                         screen.pop();
                                         trigger_find(&mut screen);
-                                    } else if (string.eq(&info)) | (string.eq(&info_lower)) {
-
+                                    } else if (string.eq(&info)) | (string.eq(&info_lower)) { //file info
+                                        screen.pop();
+                                        trigger_file_info(&mut screen, &opened_file_path);
                                     } else {
                                         screen.pop();
                                     }
@@ -574,6 +576,13 @@ fn main() {
     // EXIT
 }
 
+/*
+ *  This function is called when the user enters the Find command
+ *  from the Command Line screen. It essentially does the same thing as the
+ *  KeyCode::Char('f') code in main's match statement, just in function form
+ *  so it can be easily called from the command line.
+ */
+
 fn trigger_find(scr: &mut Screen) {
    if scr.page_stack.len() == 1 {
         scr.add(PageType::Find);
@@ -584,6 +593,23 @@ fn trigger_find(scr: &mut Screen) {
         scr.reset_prompt();
    }
    scr.mode = Mode::Normal;
+}
+
+/*
+ *  This function is similar to the trigger_find function. It is called when
+ *  the user enters the File Info command from the Command Line screen. It essentially does
+ *  the same thing as the KeyCode::Char('d') code in main's match statement, just in
+ *  function form so it can be easily called from the command line.
+ */
+
+fn trigger_file_info(scr: &mut Screen, path: &Option<String>) {
+    let pathname: String = String::from(match path {
+        Some(t) => t.as_str(),
+        None => "",
+    });
+
+    scr.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+
 }
 
 /*
