@@ -28,7 +28,7 @@ impl KeyHandler {
         let instance = KeyHandler {
             ip : InsertionPoint::new(),
             screen_cols: window_size.0,
-            screen_rows: window_size.1,
+            screen_rows: window_size.1-2,
             bytes_in_row: Vec::new(),
             width_in_row: Vec::new(),
             num_of_rows: 0,
