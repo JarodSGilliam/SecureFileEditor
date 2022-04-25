@@ -2,13 +2,8 @@ use crate::insertion_point::*;
 use crate::page::*;
 use crossterm::event::KeyCode;
 use std::cmp;
-<<<<<<< HEAD
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
-=======
-use std::io::Write;
-use std::io;
->>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
 
 /*
     Struct responsible for moving the user's (i)nsertion (p)oint while
@@ -28,15 +23,10 @@ pub struct KeyHandler {
 impl KeyHandler {
     //create new KeyHandler with insertion point at origin (top-left corner)
     pub fn new(window_size: (usize, usize)) -> KeyHandler {
-<<<<<<< HEAD
-        KeyHandler {
-            ip: InsertionPoint::new(),
-=======
         let instance = KeyHandler {
-            ip : InsertionPoint::new(),
->>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
+            ip: InsertionPoint::new(),
             screen_cols: window_size.0,
-            screen_rows: window_size.1-2,
+            screen_rows: window_size.1 - 2,
             bytes_in_row: Vec::new(),
             width_in_row: Vec::new(),
             num_of_rows: 0,
@@ -248,13 +238,13 @@ impl KeyHandler {
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), '\n');
-                self.bytes_in_row
-                    .insert(self.ip.y + 1, self.bytes_in_row[self.ip.y] - self.ip.x);
-                io::stdout().flush();
+                // self.bytes_in_row
+                //     .insert(self.ip.y + 1, self.bytes_in_row[self.ip.y] - self.ip.x);
+                // io::stdout().flush();
                 //println!("Enter b_i_r len: {}", self.bytes_in_row.len());
                 //println!("Enter ip x: {}, ip y: {}", self.ip.x, self.ip.y);
                 //io::stdout().flush();
-                self.bytes_in_row[self.ip.y] = self.ip.x + 1;
+                // self.bytes_in_row[self.ip.y] = self.ip.x + 1;
                 self.ip.x = 0;
                 self.ip.y += 1;
             }
@@ -271,7 +261,8 @@ impl KeyHandler {
         let (s, _) = match on_screen.row_contents.get(self.ip.y) {
             Some(s) => s,
             None => "", // is this right?
-        }.unicode_truncate(self.ip.x);
+        }
+        .unicode_truncate(self.ip.x);
         x += s.replace('\n', "").len();
         x
     }

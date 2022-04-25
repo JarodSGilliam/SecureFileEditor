@@ -1,13 +1,12 @@
-use std::io::{stdout, BufRead, Write};
+use std::io::{stdout, BufRead};
 use std::path::Path;
-use std::{cmp, fs, io, thread, time};
+use std::{io, thread, time};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::style::*;
-use crossterm::terminal::ClearType;
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::Result as CResult;
-use crossterm::{cursor, event, execute, queue, style, terminal};
+use crossterm::{event, execute, terminal};
 
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
@@ -17,9 +16,9 @@ use syntect::parsing::SyntaxSet;
 pub mod file_io;
 pub mod insertion_point;
 pub mod key_handler;
+pub mod language;
 pub mod page;
 pub mod screen;
-pub mod language;
 
 use file_io::FileIO;
 use page::*;
@@ -72,7 +71,7 @@ fn main() {
 
     // let mut the_text_that_is_being_searched_for = String::new();
 
-    let mut indices: Vec<usize>;// = Vec::new(); //list of indices where find text occurs
+    let mut indices: Vec<usize>; // = Vec::new(); //list of indices where find text occurs
     let mut coordinates: Vec<(usize, usize)> = Vec::new(); //list of x,y pairs for the cursor after find
     let mut point = 0; //used to traverse found instances
 
@@ -244,31 +243,24 @@ fn main() {
                                     let new_text: &String = &screen.text_page().contents;
                                     //println!("new_text: {}", new_text);
 
-<<<<<<< HEAD
-                                    if (!Path::new(pathname.as_str()).exists() | save_as_warned) {
+                                    if !Path::new(pathname.as_str()).exists() | save_as_warned {
                                         //if the specified filename does not already exist
-=======
-                                    if !Path::new(pathname.as_str()).exists() | save_as_warned {   //if the specified filename does not already exist
->>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
                                         match FileIO::overwrite_to_file(&pathname, new_text) {
                                             Ok(_) => {
                                                 screen.file_name = Some(pathname.clone());
                                                 screen.reset_prompt();
                                                 screen.pop();
                                                 save_as_warned = false;
-<<<<<<< HEAD
+                                                println!("{}", get_extension(pathname.clone()));
+                                                screen.color_struct = Screen::get_color_struct(
+                                                    get_extension(pathname.clone()),
+                                                );
+                                                println!("{:?}", screen.color_struct.language);
                                             }
                                             Err(e) => eprint!(
                                                 "Failed to save as new file due to error {}",
                                                 e
                                             ),
-=======
-                                                println!("{}", get_extension(pathname.clone()));
-                                                screen.color_struct = Screen::get_color_struct(get_extension(pathname.clone()));
-                                                println!("{:?}", screen.color_struct.language);
-                                            },
-                                            Err(e) => eprint!("Failed to save as new file due to error {}", e),
->>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
                                         }
                                     } else {
                                         screen.active_mut().set_prompt(String::from("Warning: File Already Exists, Press Enter to Overwrite or choose new file name"));
@@ -284,8 +276,6 @@ fn main() {
                             }
                         }
 
-<<<<<<< HEAD
-=======
                         PageType::Command => {
                             screen.mode = Mode::Command(screen.active().contents.clone());
                             match screen.search_text() {
@@ -297,28 +287,27 @@ fn main() {
                                     let info = String::from("File Info");
                                     let info_lower = String::from("file info");
 
-                                    if (string.eq(&toggle)) | (string.eq(&toggle_lower)) { //toggle
+                                    if (string.eq(&toggle)) | (string.eq(&toggle_lower)) {
+                                        //toggle
                                         screen.pop();
                                         screen.color_struct.toggle_status();
-                                    } else if (string.eq(&find)) | (string.eq(&find_lower)) { //find
+                                    } else if (string.eq(&find)) | (string.eq(&find_lower)) {
+                                        //find
                                         screen.pop();
                                         trigger_find(&mut screen);
-                                    } else if (string.eq(&info)) | (string.eq(&info_lower)) { //file info
+                                    } else if (string.eq(&info)) | (string.eq(&info_lower)) {
+                                        //file info
                                         screen.pop();
                                         trigger_file_info(&mut screen, &opened_file_path);
                                     } else {
                                         screen.pop();
                                     }
-                                },
-
-                                None => {
-
                                 }
+
+                                None => {}
                             }
                         }
 
-
->>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
                         PageType::Find => {
                             screen.mode = Mode::Find(screen.active().contents.clone());
                             print!(
@@ -449,24 +438,14 @@ fn main() {
                                 Mode::Normal => break,
                                 Mode::Find(_) => break,
                                 Mode::Replace(t) => t,
-<<<<<<< HEAD
-                                Mode::SaveAs(t) => break,
+                                Mode::SaveAs(_t) => break,
+                                Mode::Command(t) => break,
                             }
                             .clone();
                             screen.text_page_mut().contents = screen
                                 .text_page_mut()
                                 .contents
                                 .replace(temp007.as_str(), to_replace.as_str());
-=======
-                                Mode::SaveAs(_t) => break,
-                                Mode::Command(t) => break,
-                            }.clone();
-                            screen.text_page_mut().contents =
-                                screen.text_page_mut().contents.replace(
-                                    temp007.as_str(),
-                                    to_replace.as_str(),
-                                );
->>>>>>> 8eef899c5d773f4fcdafbe5493dcfd91cb8d8a10
                             screen.pop();
                             screen
                                 .text_page_mut()
@@ -617,15 +596,15 @@ fn main() {
  */
 
 fn trigger_find(scr: &mut Screen) {
-   if scr.page_stack.len() == 1 {
+    if scr.page_stack.len() == 1 {
         scr.add(PageType::Find);
         scr.active_mut().set_prompt(String::from("Text to Find"));
-   }
+    }
 
-   if scr.find_mode() {
+    if scr.find_mode() {
         scr.reset_prompt();
-   }
-   scr.mode = Mode::Normal;
+    }
+    scr.mode = Mode::Normal;
 }
 
 /*
@@ -642,7 +621,6 @@ fn trigger_file_info(scr: &mut Screen, path: &Option<String>) {
     });
 
     scr.add_info_page(String::from(FileIO::get_metadata(&pathname)));
-
 }
 
 /*
