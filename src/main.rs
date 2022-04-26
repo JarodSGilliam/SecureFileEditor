@@ -37,7 +37,11 @@ fn main() {
     let opened_file_path = FileIO::get_file_path(std::env::args());
     let mut extension: String = String::from("");
     let args: Vec<String> = std::env::args().collect(); //get command-line args
-    let mut passed_arg: String = args[1].clone();       //get passed file name for saving to non-existent file
+    let mut passed_arg: String = String::new();
+    if args.len() >= 2 {    //get passed file argument for saving purposes
+        passed_arg = args[1].clone();
+    }
+
     match opened_file_path.clone() {
         Some(string) => {
             extension = get_extension(string);
