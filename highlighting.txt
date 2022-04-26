@@ -1,0 +1,18 @@
+! py
+(0, 0, 255) false, None, except, in, True, class, is, and, lambda, def, nonlocal, global, not, or
+(128, 0, 128) await, else, import, pass, break, raise, finally, return, continue, for, try, as, from, while, assert, del, with, async, elif, if, yield
+comment #
+
+! rs
+(0, 0, 255) as, const, crate, enum, extern, false, fn, impl, in, let, mod, move, mut, pub, ref, self, Self, static, struct, super, trait, true, type, unsafe, use, where, async, dyn, abstract, become, box, final, macro, override, priv, typeof, unsized, virtual, union, dyn
+(128, 0, 128) break, continue, else, for, if, loop, match, return, while, await, do, yield, try
+comment //
+mlcomment /* */
+
+! java
+(0, 0, 255) abstract, final, import, instanceof, native, null, package, private, protected, public, static, strictfp, super, synchronized, this, transient, volatile, 
+(128, 0, 128) assert, break, case, catch, continue, default, do, else, finally, for, if, new, return, switch, throw, try, while
+green boolean, byte, char, double, float, int, long, short, void, 
+(0, 0, 0) class, enum, extends, implements, interface, throws
+comment //
+mlcomment /* */
