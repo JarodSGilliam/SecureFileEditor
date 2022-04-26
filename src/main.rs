@@ -36,6 +36,8 @@ fn main() {
     let _tidy_up = TidyUp;
     let opened_file_path = FileIO::get_file_path(std::env::args());
     let mut extension: String = String::from("");
+    let args: Vec<String> = std::env::args().collect(); //get command-line args
+    let mut passed_arg: String = args[1].clone();       //get passed file name for saving to non-existent file
     match opened_file_path.clone() {
         Some(string) => {
             extension = get_extension(string);
@@ -114,22 +116,38 @@ fn main() {
                     code: KeyCode::Char('s'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    screen.active_mut().set_prompt(String::from("Saved!"));
+
+//                    screen.active_mut().set_prompt(String::from("Saved!"));
                     let pathname: String = String::from(match &opened_file_path {
                         Some(t) => t.as_str(),
                         None => "",
                     });
-                    let new_text: &String = &screen.active().contents;
-                    match FileIO::overwrite_to_file(&pathname, new_text) {
-                        Ok(_) => {}
-                        Err(e) => eprint!("Failed to save because of error {}", e),
-                    };
-                    if screen.find_mode() {
-                        screen.active_mut().set_prompt(String::from(""));
-                    }
-                    screen.mode = Mode::Normal;
-                    // break
-                }
+                    if !Path::new(pathname.as_str()).exists() && passed_arg.len() < 1 { //empty cmd-line arg
+                        trigger_saveas(&mut screen);
+
+                    } else if !Path::new(pathname.as_str()).exists() { //cmd-line arg refers to new file
+                       screen.file_name = Some(passed_arg.clone());
+                       screen.reset_prompt();
+                       let file_text: &String = &screen.active().contents;
+                       match FileIO::overwrite_to_file(&passed_arg, file_text) {
+                            Ok(_) => {},
+                            Err(e) => eprint!("Failed to save because of error {}", e),
+                       }
+
+                    } else { //else save as usual
+                        screen.active_mut().set_prompt(String::from("Saved!"));
+                        let new_text: &String = &screen.active().contents;
+                        match FileIO::overwrite_to_file(&pathname, new_text) {
+                            Ok(_) => {}
+                            Err(e) => eprint!("Failed to save because of error {}", e),
+                        };
+                        if screen.find_mode() {
+                            screen.active_mut().set_prompt(String::from(""));
+                        }
+                        screen.mode = Mode::Normal;
+                        // break
+                        }
+                    } //if-else for triggering SaveAs when user passes no cmd-line args
 
                 //save file as [name]
                 KeyEvent {
@@ -621,6 +639,21 @@ fn trigger_file_info(scr: &mut Screen, path: &Option<String>) {
     });
 
     scr.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+}
+
+/*
+ *  This function is called from main if the user is trying to save a new file
+ *  that does not yet exist in the system. Its functionality is similar to the
+ *  KeyCode::Char('s') code in main's match statement.
+ */
+
+fn trigger_saveas(scr: &mut Screen) {
+    if scr.page_stack.len() == 1 {
+        scr.add(PageType::SaveAs);
+        scr.active_mut().set_prompt(String::from("Save As"));
+    }
+
+    scr.mode = Mode::Normal;
 }
 
 /*
