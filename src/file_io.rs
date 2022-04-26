@@ -56,7 +56,6 @@ impl FileIO {
     }
 
     pub fn auto_save(pathname: &Option<String>, current_state_of_text: &String) {
-        println!("Autosaving...");
         let pathname: String = {
             match pathname {
                 Some(s) => FileIO::get_auto_save_path(s),
@@ -122,15 +121,10 @@ impl FileIO {
                 file_type = String::new();
             }
             file_type += format!("{}", a).as_str();
-            // print!("{} ", a);
         }
 
-        println!("{}", file_text);
-        println!("{}", file_type);
-
         let output : String = format!(
-            "File name: {}\nFile type: {}\nLast accessed: {}\nCreated:       {}\nLast Modified: {}\nLength:        {} characters\nPermissions:   {}",
-            // pathname.chars()[0..pathname.chars().find('.')], 
+            "File name: {}\nFile type: {}\nLast accessed: {}\nCreated: {}\nLast Modified: {}\nLength: {} characters\nPermissions: {}",
             file_text, file_type, accessed, created, modified, metadata.len(), if metadata.permissions().readonly() {"Read only"} else {"Writeable"}
         );
         output
