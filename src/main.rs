@@ -205,7 +205,7 @@ fn main() {
                 }
 
                 KeyEvent {
-                    code: KeyCode::Char(' '),
+                    code: KeyCode::Char('c'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     screen.add(PageType::Command);
