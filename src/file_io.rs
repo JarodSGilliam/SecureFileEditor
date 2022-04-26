@@ -124,7 +124,7 @@ impl FileIO {
         }
 
         let output : String = format!(
-            "File name: {}\nFile type: {}\nLast accessed: {}\nCreated: {}\nLast Modified: {}\nLength: {} characters\nPermissions: {}",
+            "File name: {}\nFile type: {}\nLast accessed: {}\nCreated: {}\nLast Modified: {}\nLength: {} characters\nPermissions:   {}",
             file_text, file_type, accessed, created, modified, metadata.len(), if metadata.permissions().readonly() {"Read only"} else {"Writeable"}
         );
         output
