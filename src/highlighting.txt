@@ -16,3 +16,40 @@ green boolean, byte, char, double, float, int, long, short, void,
 (0, 0, 0) class, enum, extends, implements, interface, throws
 comment //
 mlcomment /* */
+
+! js
+(0, 0, 100) abstract, boolean, byte, char, double, enum, extends, final, float, for, implements, int, long, native, private, protected, public, short, static, synchronized, throws, transient, volatile, hasOwnProperty, isPrototypeOf, length, Math, name, prototype, valueOf
+(0, 0, 255) arguments, class, const, debugger, delete, export, false, function, in, instanceof, interface, let, new, null, super, this, true, typeof, var, void, Infinity, NaN, undefined
+(128, 0, 128) await, break, case, catch, continue, default, do, else, finally, goto, if, import, package, return, switch, throw, try, while, with, yield
+(0, 255, 0) Array, Date, Number, Object, String
+(255, 255, 150) eval, isFinite, isNaN, toString, onblur, onclick, onerror, onfocus, onkeydown, onkeypress, onkeyup, onmouseover, onload, onmouseup, onmousedown, onsubmit, blur, clearInterval, clearTimeout, close, confirm, decodeURI, decodeURIComponent, encodeURI, encodeURIComponent, escape, focus, open, parseFloat, parseInt, prompt, scroll, setInterval, setTimeout, unescape
+comment //
+mlcomment /* */
+
+! swift
+(0, 0, 255) deinit, extension, internal, operator, private, protocol, public, static, struct, subscript, typealias, var, false, nil, self, Self, super, true, convenience, dynamic, didSet, final, get, infix, inout, lazy, mutating, nonmutating, optional, override, postfix, prefix, required, set, unowned, weak, willSet
+(128, 0, 128) import, break, case, continue, default, do, else, fallthrough, for, if, in, return, switch, where, while
+comment //
+mlcomment /* */
+capitals (0, 0, 0)
+
+! go
+(0, 0, 255) func, interface, map, struct, chan, package, const, type, import, var
+(128, 0, 128) break, default, select, case, defer, go, else, goto, switch, fallthrough, if, range, continue, for, return
+comment //
+mlcomment /* */
+capitals (0, 0, 0)
+numbers (255, 0, 0)
+
+! rb rbx rjx gemspec rake ru erb podspec rbi
+(0, 0, 255) __LINE__, __FILE__, false, nil, self, true
+(128, 0, 128) BEGIN, END, alias, begin, break, case, class, def, defined?, do, else, elsif, end, ensure, for, if, in, module, next, redo, rescue, retry, return, super, then, undef, unless, until, when, while, yield
+comment #
+capitals (0, 0, 100)
+
+! c i
+(0, 0, 255) char, const, double, enum, extern, float, int, long, register, short, signed, sizeof, static, struct, typedef, union, unsigned, void, volatile
+(128, 0, 128) break, continue, do, else, for, goto, if, return, switch, while
+comment //
+mlcomment /* */
+numbers (255, 0, 0)
