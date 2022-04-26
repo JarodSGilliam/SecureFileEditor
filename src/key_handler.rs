@@ -136,7 +136,11 @@ impl KeyHandler {
                 on_screen.row_contents = split_with_n(&on_screen.contents);
                 //println!("\ninsertion b_i_r len: {}", self.bytes_in_row.len());
                 //println!("\ninsertion ip x: {}, y: {}", self.ip.x, self.ip.y);
-                self.bytes_in_row[self.ip.y] += c.to_string().len();
+                if self.ip.y == self.bytes_in_row.len() {
+                    self.bytes_in_row.push(c.to_string().len());
+                } else {
+                    self.bytes_in_row[self.ip.y] += c.to_string().len();
+                }
                 self.ip.x += 1;
                 let (_, mut w) = on_screen
                     .row_contents
