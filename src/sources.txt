@@ -1,0 +1,23 @@
+JavaScript Syntax Highlighting information from:
+https://www.w3schools.com/js/js_reserved.asp
+
+Java Syntax Highlighting information from:
+https://www.geeksforgeeks.org/list-of-all-java-keywords/
+
+Python Syntax Highlighting information from:
+https://www.programiz.com/python-programming/keyword-list
+
+Rust Syntax Highlighting information from:
+https://doc.rust-lang.org/reference/keywords.html
+
+Swift Syntax Highlighting information from:
+https://www.tutorialkart.com/swift-tutorial/swift-keywords/
+
+Go Syntax Highlighting information from:
+https://go101.org/article/keywords-and-identifiers.html
+
+Ruby Syntax Highlighting information from:
+https://docs.ruby-lang.org/en/2.2.0/keywords_rdoc.html
+
+C Syntax Highlighting information from:
+https://www.programiz.com/c-programming/list-all-keywords-c-language
