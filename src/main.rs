@@ -57,7 +57,7 @@ fn main() {
     let syntax = s_set
         .find_syntax_by_extension(extension.as_str())
         .unwrap_or_else(|| s_set.find_syntax_plain_text()); //load plaintext syntax if extension does not yield another valid syntax
-    println!("{}", syntax.name);
+    
     // Setup
     match crossterm::terminal::enable_raw_mode() {
         Ok(_a) => {}
@@ -234,31 +234,36 @@ fn main() {
                             screen.mode = Mode::SaveAs(screen.active().contents.clone());
                             match screen.search_text() {
                                 Some(string) => {
-                                    let pathname = string.clone();
-                                    let new_text: &String = &screen.text_page().contents;
+                                    if string.eq("") == false {
+                                        let pathname = string.clone();
+                                        let new_text: &String = &screen.text_page().contents;
 
-                                    if !Path::new(pathname.as_str()).exists() | save_as_warned {
-                                        //if the specified filename does not already exist
-                                        match FileIO::overwrite_to_file(&pathname, new_text) {
-                                            Ok(_) => {
-                                                screen.file_name = Some(pathname.clone());
-                                                screen.reset_prompt();
-                                                screen.pop();
-                                                save_as_warned = false;
-                                                println!("{}", get_extension(pathname.clone()));
-                                                screen.color_struct = Screen::get_color_struct(
-                                                    get_extension(pathname.clone()),
-                                                );
-                                                println!("{:?}", screen.color_struct.language);
+                                        if !Path::new(pathname.as_str()).exists() | save_as_warned {
+                                            //if the specified filename does not already exist
+                                            match FileIO::overwrite_to_file(&pathname, new_text) {
+                                                Ok(_) => {
+                                                    screen.file_name = Some(pathname.clone());
+                                                    screen.reset_prompt();
+                                                    screen.pop();
+                                                    save_as_warned = false;
+                                                    println!("{}", get_extension(pathname.clone()));
+                                                    screen.color_struct = Screen::get_color_struct(
+                                                        get_extension(pathname.clone()),
+                                                    );
+                                                    println!("{:?}", screen.color_struct.language);
+                                                }
+                                                Err(e) => eprint!(
+                                                    "Failed to save as new file due to error {}",
+                                                    e
+                                                ),
                                             }
-                                            Err(e) => eprint!(
-                                                "Failed to save as new file due to error {}",
-                                                e
-                                            ),
+                                        } else {
+                                            screen.active_mut().set_prompt(String::from("Warning: File Already Exists, Press Enter to Overwrite or choose new file name"));
+                                            save_as_warned = true;
                                         }
                                     } else {
-                                        screen.active_mut().set_prompt(String::from("Warning: File Already Exists, Press Enter to Overwrite or choose new file name"));
-                                        save_as_warned = true;
+                                        screen.pop();
+                                        save_as_warned = false;
                                     }
                                 }
 
@@ -304,57 +309,63 @@ fn main() {
 
                         PageType::Find => {
                             screen.mode = Mode::Find(screen.active().contents.clone());
-                            print!(
-                                "\nThe text the user was looking for: {}",
-                                screen.search_text().unwrap()
-                            );
+
                             // screen.mode = Mode::Find(the_text_that_is_being_searched_for);
-                            let number_found = screen
-                                .text_page()
-                                .contents
-                                .matches(&screen.search_text().unwrap())
-                                .count();
-                            if number_found > 1 {
-                                screen.text_page_mut().set_prompt(format!(
-                                    "Found {} matches: (Ctrl + Left for previous, Ctrl + Right for next, ESC to exit find mode)",
-                                    number_found
-                                ));
-                            } else if number_found == 1 {
-                                screen
-                                    .text_page_mut()
-                                    .set_prompt(format!("Found 1 match: (ESC to exit find mode)",));
-                            } else {
-                                screen.text_page_mut().set_prompt(format!(
-                                    "Found no matches: (Try searching for something else, ESC to exit find mode)",
-                                ));
-                            }
-                            
-                            screen.pop();
-
-                            //Find & Move Cursor operation below
-
-                            indices = get_indices(
-                                &screen.text_page().contents,
-                                &screen.search_text().unwrap(),
-                                number_found,
-                            ); //list of indices where find text occurs
-                            coordinates = get_xs_and_ys(indices, &screen.active().contents); //list of (x, y) pairs for moving the cursor
-
-                            let (res1, res2) =
-                                find_text(screen.text_page(), &screen.search_text().unwrap());
-                            match res1 {
-                                Some(_t) => {
-                                    //if res1 is not a None, then at least one occurrence was found
-                                    screen.key_handler.ip.x = res1.unwrap();
-                                    screen.key_handler.ip.y = res2.unwrap();
-                                    
+                            match screen.search_text() {
+                                None => {
+                                    screen.pop();
                                 }
-                                None => {}
+                                Some(str) => {
+                                    if str.eq("") == false {
+                                    let number_found = screen
+                                        .text_page()
+                                        .contents
+                                        .matches(&screen.search_text().unwrap())
+                                        .count();
+                                    if number_found > 1 {
+                                        screen.text_page_mut().set_prompt(format!(
+                                            "Found {} matches: (Ctrl + Left for previous, Ctrl + Right for next, ESC to exit find mode)",
+                                            number_found
+                                        ));
+                                    } else if number_found == 1 {
+                                        screen
+                                            .text_page_mut()
+                                            .set_prompt(format!("Found 1 match: (ESC to exit find mode)",));
+                                    } else {
+                                        screen.text_page_mut().set_prompt(format!(
+                                            "Found no matches: (Try searching for something else, ESC to exit find mode)",
+                                        ));
+                                    }
                                 
-                            }
+                                    screen.pop();
+
+                                    //Find & Move Cursor operation below
+
+                                    indices = get_indices(
+                                        &screen.text_page().contents,
+                                        &screen.search_text().unwrap(),
+                                        number_found,
+                                    ); //list of indices where find text occurs
+                                    coordinates = get_xs_and_ys(indices, &screen.active().contents); //list of (x, y) pairs for moving the cursor
+
+                                    let (res1, res2) =
+                                        find_text(screen.text_page(), &screen.search_text().unwrap());
+                                    match res1 {
+                                        Some(_t) => {
+                                            //if res1 is not a None, then at least one occurrence was found
+                                            screen.key_handler.ip.x = res1.unwrap();
+                                            screen.key_handler.ip.y = res2.unwrap();
+                                    
+                                        }
+                                        None => {}
+                                
+                                    }
                             
-                            //continue;
-                        }
+                                //continue;
+                                    } //if search text not empty
+                                } 
+                            } //match if search text is empty or not
+                        } //match PageType::Find
                         PageType::ReplaceP1 => {
                             screen.mode = Mode::Replace(match screen.page_stack.last() {
                                 Some(t) => String::from(t.contents.as_str()),
