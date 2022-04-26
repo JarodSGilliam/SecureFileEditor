@@ -38,7 +38,8 @@ fn main() {
     let mut extension: String = String::from("");
     let args: Vec<String> = std::env::args().collect(); //get command-line args
     let mut passed_arg: String = String::new();
-    if args.len() >= 2 {    //get passed file argument for saving purposes
+    if args.len() >= 2 {
+        //get passed file argument for saving purposes
         passed_arg = args[1].clone();
     }
 
@@ -50,14 +51,10 @@ fn main() {
     }
 
     let mut save_as_warned = false;
-
-    //println!("extension: {}", extension);
-    //let mut builder = SyntaxSetBuilder::new();
     let s_set = SyntaxSet::load_defaults_newlines();
     let syntax = s_set
         .find_syntax_by_extension(extension.as_str())
         .unwrap_or_else(|| s_set.find_syntax_plain_text()); //load plaintext syntax if extension does not yield another valid syntax
-    
     // Setup
     match crossterm::terminal::enable_raw_mode() {
         Ok(_a) => {}
@@ -74,7 +71,6 @@ fn main() {
         FileIO::get_file_contents(&opened_file_path),
     ));
     screen.reset_prompt();
-
 
     let mut indices: Vec<usize>; // = Vec::new(); //list of indices where find text occurs
     let mut coordinates: Vec<(usize, usize)> = Vec::new(); //list of x,y pairs for the cursor after find
@@ -104,24 +100,24 @@ fn main() {
                     code: KeyCode::Char('s'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-
                     let pathname: String = String::from(match &opened_file_path {
                         Some(t) => t.as_str(),
                         None => "",
                     });
-                    if !Path::new(pathname.as_str()).exists() && passed_arg.len() < 1 { //empty cmd-line arg
+                    if !Path::new(pathname.as_str()).exists() && passed_arg.len() < 1 {
+                        //empty cmd-line arg
                         trigger_saveas(&mut screen);
-
-                    } else if !Path::new(pathname.as_str()).exists() { //cmd-line arg refers to new file
-                       screen.file_name = Some(passed_arg.clone());
-                       screen.reset_prompt();
-                       let file_text: &String = &screen.active().contents;
-                       match FileIO::overwrite_to_file(&passed_arg, file_text) {
-                            Ok(_) => {},
+                    } else if !Path::new(pathname.as_str()).exists() {
+                        //cmd-line arg refers to new file
+                        screen.file_name = Some(passed_arg.clone());
+                        screen.reset_prompt();
+                        let file_text: &String = &screen.active().contents;
+                        match FileIO::overwrite_to_file(&passed_arg, file_text) {
+                            Ok(_) => {}
                             Err(e) => eprint!("Failed to save because of error {}", e),
-                       }
-
-                    } else { //else save as usual
+                        }
+                    } else {
+                        //else save as usual
                         screen.active_mut().set_prompt(String::from("Saved!"));
                         let new_text: &String = &screen.active().contents;
                         match FileIO::overwrite_to_file(&pathname, new_text) {
@@ -133,8 +129,8 @@ fn main() {
                         }
                         screen.mode = Mode::Normal;
                         // break
-                        }
-                    } //if-else for triggering SaveAs when user passes no cmd-line args
+                    }
+                } //if-else for triggering SaveAs when user passes no cmd-line args
 
                 //save file as [name]
                 KeyEvent {
@@ -192,7 +188,6 @@ fn main() {
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     screen.add(PageType::Command);
-                    // screen.add_info_page(String::from(FileIO::get_metadata(&pathname)));
                     screen.mode = Mode::Normal;
                 }
 
@@ -223,7 +218,6 @@ fn main() {
                     match screen.active().display_type {
                         PageType::Text => {
                             if screen.find_mode() {
-                               
                                 screen.mode = Mode::Normal;
                                 continue;
                             }
@@ -317,53 +311,53 @@ fn main() {
                                 }
                                 Some(str) => {
                                     if str.eq("") == false {
-                                    let number_found = screen
-                                        .text_page()
-                                        .contents
-                                        .matches(&screen.search_text().unwrap())
-                                        .count();
-                                    if number_found > 1 {
-                                        screen.text_page_mut().set_prompt(format!(
+                                        let number_found = screen
+                                            .text_page()
+                                            .contents
+                                            .matches(&screen.search_text().unwrap())
+                                            .count();
+                                        if number_found > 1 {
+                                            screen.text_page_mut().set_prompt(format!(
                                             "Found {} matches: (Ctrl + Left for previous, Ctrl + Right for next, ESC to exit find mode)",
                                             number_found
                                         ));
-                                    } else if number_found == 1 {
-                                        screen
-                                            .text_page_mut()
-                                            .set_prompt(format!("Found 1 match: (ESC to exit find mode)",));
-                                    } else {
-                                        screen.text_page_mut().set_prompt(format!(
+                                        } else if number_found == 1 {
+                                            screen.text_page_mut().set_prompt(format!(
+                                                "Found 1 match: (ESC to exit find mode)",
+                                            ));
+                                        } else {
+                                            screen.text_page_mut().set_prompt(format!(
                                             "Found no matches: (Try searching for something else, ESC to exit find mode)",
                                         ));
-                                    }
-                                
-                                    screen.pop();
-
-                                    //Find & Move Cursor operation below
-
-                                    indices = get_indices(
-                                        &screen.text_page().contents,
-                                        &screen.search_text().unwrap(),
-                                        number_found,
-                                    ); //list of indices where find text occurs
-                                    coordinates = get_xs_and_ys(indices, &screen.active().contents); //list of (x, y) pairs for moving the cursor
-
-                                    let (res1, res2) =
-                                        find_text(screen.text_page(), &screen.search_text().unwrap());
-                                    match res1 {
-                                        Some(_t) => {
-                                            //if res1 is not a None, then at least one occurrence was found
-                                            screen.key_handler.ip.x = res1.unwrap();
-                                            screen.key_handler.ip.y = res2.unwrap();
-                                    
                                         }
-                                        None => {}
-                                
-                                    }
-                            
-                                //continue;
+
+                                        screen.pop();
+
+                                        //Find & Move Cursor operation below
+
+                                        indices = get_indices(
+                                            &screen.text_page().contents,
+                                            &screen.search_text().unwrap(),
+                                            number_found,
+                                        ); //list of indices where find text occurs
+                                        coordinates =
+                                            get_xs_and_ys(indices, &screen.active().contents); //list of (x, y) pairs for moving the cursor
+
+                                        let (res1, res2) = find_text(
+                                            screen.text_page(),
+                                            &screen.search_text().unwrap(),
+                                        );
+                                        match res1 {
+                                            Some(_t) => {
+                                                //if res1 is not a None, then at least one occurrence was found
+                                                screen.key_handler.ip.x = res1.unwrap();
+                                                screen.key_handler.ip.y = res2.unwrap();
+                                            }
+                                            None => {}
+                                        }
+                                        //continue;
                                     } //if search text not empty
-                                } 
+                                }
                             } //match if search text is empty or not
                         } //match PageType::Find
                         PageType::ReplaceP1 => {
@@ -380,7 +374,6 @@ fn main() {
                             if screen.find_mode() {
                                 screen.reset_prompt();
                             }
-                            // screen.mode = Mode::Replace();
                             continue;
                         }
                         PageType::ReplaceP2 => {
@@ -405,12 +398,9 @@ fn main() {
                                 .text_page_mut()
                                 .set_prompt(String::from("Replaced here:"));
                             screen.mode = Mode::Replace(to_replace.clone());
-                            // for
-                            println!("{}", to_replace);
                             if screen.find_mode() {
                                 screen.reset_prompt();
                             }
-                            // screen.mode = Mode::Normal;
                             continue;
                         }
                         _ => {}
@@ -436,7 +426,6 @@ fn main() {
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
                     // Jarod's Version
-
                     if screen.page_stack.len() == 1 {
                         // find_display
                         screen.add(PageType::Find);
@@ -448,8 +437,6 @@ fn main() {
                             At this point we want to get the user's input for the text they'd like to find.
                             Using io::stdin doesn't seem to work, so we may need to use something else here.
                         */
-
-                       
                     }
                     if screen.find_mode() {
                         screen.reset_prompt();
@@ -491,7 +478,6 @@ fn main() {
                         }
                     }
                 }
-                
                 _ => {}
             }
         }
@@ -726,58 +712,57 @@ fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
 
 // render the tab
 // #[derive(PartialEq)]
-struct RowContent {
-    row_content: String,
-    render: String,
-    highlight: Vec<HighLight>,
-}
+// struct RowContent {
+//     row_content: String,
+//     render: String,
+//     highlight: Vec<HighLight>,
+// }
 
-struct EachRowContent {
-    row_content_each: Vec<RowContent>,
-}
+// struct EachRowContent {
+//     row_content_each: Vec<RowContent>,
+// }
 
-impl RowContent {
-    fn new(row_content: String, render: String, highlight: Vec<HighLight>) -> Self {
-        Self {
-            row_content,
-            render,
-            highlight,
-        }
-    }
-}
-impl EachRowContent {
-    fn new() -> Self {
-        Self {
-            row_content_each: Vec::new(),
-        }
-    }
+// impl RowContent {
+//     fn new(row_content: String, render: String, highlight: Vec<HighLight>) -> Self {
+//         Self {
+//             row_content,
+//             render,
+//             highlight,
+//         }
+//     }
+// }
+// impl EachRowContent {
+//     fn new() -> Self {
+//         Self {
+//             row_content_each: Vec::new(),
+//         }
+//     }
 
-    fn render_content(&self, row: &mut RowContent) {
-        let mut ip = 0;
-        let capacity = row
-            .row_content
-            .chars()
-            .fold(0, |acc, next| acc + if next == '\t' { 8 } else { 1 });
-        row.render = String::with_capacity(capacity);
-        row.row_content.chars().for_each(|c| {
-            ip += 1;
-            if c == '\t' {
-                row.render.push(' ');
-                while ip % 8 != 0 {
-                    row.render.push(' ');
-                    ip += 1
-                }
-            } else {
-                row.render.push(c);
-            }
-        });
-    }
+//     fn render_content(&self, row: &mut RowContent) {
+//         let mut ip = 0;
+//         let capacity = row
+//             .row_content
+//             .chars()
+//             .fold(0, |acc, next| acc + if next == '\t' { 8 } else { 1 });
+//         row.render = String::with_capacity(capacity);
+//         row.row_content.chars().for_each(|c| {
+//             ip += 1;
+//             if c == '\t' {
+//                 row.render.push(' ');
+//                 while ip % 8 != 0 {
+//                     row.render.push(' ');
+//                     ip += 1
+//                 }
+//             } else {
+//                 row.render.push(c);
+//             }
+//         });
+//     }
 
-    pub fn make_render(&self, t: usize) -> &String {
-        &self.row_content_each[t].render
-    }
-
-}
+//     pub fn make_render(&self, t: usize) -> &String {
+//         &self.row_content_each[t].render
+//     }
+// }
 
 // highlight the search result
 // syntax highlight function
@@ -792,7 +777,6 @@ enum HighLight {
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
     fn match_type(&self, page: &Page) -> HighLight;
-  
 }
 
 /*
