@@ -75,35 +75,19 @@ fn main() {
     ));
     screen.reset_prompt();
 
-    // let mut the_text_that_is_being_searched_for = String::new();
 
     let mut indices: Vec<usize>; // = Vec::new(); //list of indices where find text occurs
     let mut coordinates: Vec<(usize, usize)> = Vec::new(); //list of x,y pairs for the cursor after find
     let mut point = 0; //used to traverse found instances
 
     // render the context
-    // let mut row_content = screens_stack.first().unwrap().contents.clone();
-    // let mut eachrowcontent: EachRowContent = EachRowContent::new();
-    // let mut rowcontent: RowContent = RowContent::new(row_content, String::new(), Vec::new());
-    // let mut rendercontent = eachrowcontent.render_content(&mut rowcontent);
-
     // PROGRAM RUNNING
     loop {
         // Displays the contents of the top screen
         match screen.refresh_screen() {
-            //the_text_that_is_being_searched_for.as_str()
             Ok(_) => {}
             Err(e) => eprint!("{}", e),
         };
-
-        // new display function which can match the word it founded and color it
-        // match screen.refresh_screen(match screens_stack.last() {
-        //     Some(t) => t,
-        //     None => break,
-        // },& indices,& the_text_that_is_being_searched_for) {
-        //     Ok(_) => {}
-        //     Err(e) => eprint!("{}", e),
-        // };
 
         // Watches for key commands
         if let Event::Key(event) =
@@ -121,7 +105,6 @@ fn main() {
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
 
-//                    screen.active_mut().set_prompt(String::from("Saved!"));
                     let pathname: String = String::from(match &opened_file_path {
                         Some(t) => t.as_str(),
                         None => "",
@@ -240,18 +223,8 @@ fn main() {
                     match screen.active().display_type {
                         PageType::Text => {
                             if screen.find_mode() {
-                                //fix here
-                                /* screens_stack.first_mut().unwrap().contents =
-                                 screens_stack.first_mut().unwrap().contents.replace(
-                                    format!(
-                                        "|{}|",
-                                        the_text_that_is_being_searched_for.as_str()
-                                    )
-                                    .as_str(),
-                                    the_text_that_is_being_searched_for.as_str(),
-                                ); */
+                               
                                 screen.mode = Mode::Normal;
-                                // the_text_that_is_being_searched_for = ;
                                 continue;
                             }
                             screen.insertion(KeyCode::Enter);
@@ -263,7 +236,6 @@ fn main() {
                                 Some(string) => {
                                     let pathname = string.clone();
                                     let new_text: &String = &screen.text_page().contents;
-                                    //println!("new_text: {}", new_text);
 
                                     if !Path::new(pathname.as_str()).exists() | save_as_warned {
                                         //if the specified filename does not already exist
@@ -356,12 +328,7 @@ fn main() {
                                     "Found no matches: (Try searching for something else, ESC to exit find mode)",
                                 ));
                             }
-                            /* screens_stack.first_mut().unwrap().contents =    //fix here
-                            screens_stack.first_mut().unwrap().contents.replace(
-                                the_text_that_is_being_searched_for.as_str(),
-                                format!("|{}|", the_text_that_is_being_searched_for.as_str())
-                                    .as_str(),
-                            ); */
+                            
                             screen.pop();
 
                             //Find & Move Cursor operation below
@@ -380,55 +347,12 @@ fn main() {
                                     //if res1 is not a None, then at least one occurrence was found
                                     screen.key_handler.ip.x = res1.unwrap();
                                     screen.key_handler.ip.y = res2.unwrap();
-                                    // let mut point = 0;
-                                    // highlight the searching results
-                                    // (_t.._t + the_text_that_is_being_searched_for.len())
-                                    // .for_each(|_t| rendercontent.highlight[_t] = HighLight::Search);
-                                    /* loop {
-                                        if let Event::Key(event) =
-                                        event::read().unwrap_or(Event::Key(KeyEvent::new(KeyCode::Null, KeyModifiers::NONE))) {
-                                            match event {
-                                                KeyEvent {      //user pressed Ctrl+n, advance to next instance
-                                                    code: KeyCode::Char('n'),
-                                                    modifiers: event::KeyModifiers::CONTROL,
-                                                } => {
-                                                    if point < coordinates.len() - 1 {
-                                                        point += 1;
-                                                        screen.key_handler.ip.x = coordinates[point].0;
-                                                        screen.key_handler.ip.y = coordinates[point].1;
-                                                    }
-                                                },
-
-                                                KeyEvent {      //user presed Ctrl+p, revert to previous instance
-                                                    code: KeyCode::Char('p'),
-                                                    modifiers: event::KeyModifiers::CONTROL,
-                                                } => {
-                                                    if point > 0 {
-                                                        point -= 1;
-                                                        screen.key_handler.ip.x = coordinates[point].0;
-                                                        screen.key_handler.ip.y = coordinates[point].1;
-                                                    }
-                                                },
-
-                                                _ => break     //all else, break the loop
-                                            }
-                                        }
-                                    }   //end of loop */
+                                    
                                 }
-                                None => {
-                                    // let cursor_location = screen.text_page_mut().active_cursor_location.as_ref().unwrap();
-                                    // screen.key_handler.ip.x = cursor_location.x;
-                                    // screen.key_handler.ip.y = cursor_location.y;
-                                }
+                                None => {}
+                                
                             }
-                            /*
-                            let cursor_location = match screens_stack.first_mut() {
-                                Some(t) => t.active_cursor_location,
-                                None => {break},
-                            };
-                            screen.key_handler.ip_x = cursor_location.0;
-                            screen.key_handler.ip_y = cursor_location.1;
-                            */
+                            
                             //continue;
                         }
                         PageType::ReplaceP1 => {
@@ -436,7 +360,6 @@ fn main() {
                                 Some(t) => String::from(t.contents.as_str()),
                                 None => String::new(),
                             });
-                            // screens_stack.first_mut().unwrap().contents = screens_stack.first_mut().unwrap().contents.replace(the_text_that_is_being_searched_for.as_str(), format!("|{}|", the_text_that_is_being_searched_for.as_str()).as_str());
                             screen.pop();
                             screen.add(PageType::ReplaceP2);
                             screen
@@ -444,7 +367,6 @@ fn main() {
                                 .set_prompt(String::from("Replace P2:\nReplace:"));
                             println!("{}", screen.search_text().unwrap());
                             if screen.find_mode() {
-                                // screen.text_page_mut().set_prompt(String::from(""));
                                 screen.reset_prompt();
                             }
                             // screen.mode = Mode::Replace();
@@ -455,7 +377,6 @@ fn main() {
                                 Some(t) => String::from(t.contents.as_str()),
                                 None => String::new(),
                             };
-                            // println!("{}", screen.mode.to_str());
                             let temp007 = match &screen.mode {
                                 Mode::Normal => break,
                                 Mode::Find(_) => break,
@@ -476,7 +397,6 @@ fn main() {
                             // for
                             println!("{}", to_replace);
                             if screen.find_mode() {
-                                // screen.text_page_mut().set_prompt(String::from(""));
                                 screen.reset_prompt();
                             }
                             // screen.mode = Mode::Normal;
@@ -494,7 +414,6 @@ fn main() {
                         screen.add_help_page();
                     }
                     if screen.find_mode() {
-                        // screen.text_page_mut().set_prompt(String::from(""));
                         screen.reset_prompt();
                     }
                     screen.mode = Mode::Normal;
@@ -505,8 +424,6 @@ fn main() {
                     code: KeyCode::Char('f'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    // Hunter's version
-                    // test_alt_screen();
                     // Jarod's Version
 
                     if screen.page_stack.len() == 1 {
@@ -521,19 +438,9 @@ fn main() {
                             Using io::stdin doesn't seem to work, so we may need to use something else here.
                         */
 
-                        /*if s.len() > 0 {
-                            screens_stack.pop();
-                            let cursor_location = match screens_stack.first_mut() {
-                                Some(t) => t.active_cursor_location,
-                                None => {break},
-                            };
-                            screen.key_handler.ip_x = cursor_location.0;
-                            screen.key_handler.ip_y = cursor_location.1;
-                            }
-                        */
+                       
                     }
                     if screen.find_mode() {
-                        // screen.text_page_mut().set_prompt(String::from(""));
                         screen.reset_prompt();
                     }
                     screen.mode = Mode::Normal;
@@ -551,7 +458,6 @@ fn main() {
                             .set_prompt(String::from("Replace P1:\nFind:"));
                     }
                     if screen.find_mode() {
-                        // screen.text_page_mut().set_prompt(String::from(""));
                         screen.reset_prompt();
                     }
                     screen.mode = Mode::Normal;
@@ -563,12 +469,8 @@ fn main() {
                 } => {
                     if screen.page_stack.len() > 1 {
                         screen.pop();
-                        // let cursor_location = screen.text_page_mut().active_cursor_location.unwrap();
-                        // screen.key_handler.ip_x = cursor_location.0;
-                        // screen.key_handler.ip_y = cursor_location.1;
                     } else {
                         if screen.find_mode() || screen.mode.to_str() == "replace" {
-                            // screen.text_page_mut().set_prompt(String::from(""));
                             screen.reset_prompt();
                             screen.mode = Mode::Normal;
                             continue;
@@ -578,20 +480,8 @@ fn main() {
                         }
                     }
                 }
-                // This part is to implement the function of keyboard interacting with the text file.
-                // KeyEvent{
-                //     code: roll,
-                //     modifiers:event::KeyModifiers::NONE,
-
-                // } => {
-                //     match roll{
-                //         KeyCode::PageDown | KeyCode::PageUp => screen.key_Handler.move_ip(roll),
-                //         _ => ()
-                //     }
-                // },
-                _ => {
-                    //todo
-                }
+                
+                _ => {}
             }
         }
 
@@ -686,10 +576,6 @@ fn test_alt_screen() -> CResult<()> {
     handle.read_line(&mut buffer)?;
     thread::sleep(time::Duration::from_millis(1500));
 
-    /* queue!(stdout(), Print("alt screen".to_string()));
-    let mut s = String::new();
-    io::stdin().read_line(&mut s).expect("failed to read input");
-    thread::sleep(time::Duration::from_millis(1500)); */
     execute!(stdout(), LeaveAlternateScreen) //move back to main screen
 }
 
@@ -880,13 +766,11 @@ impl EachRowContent {
         &self.row_content_each[t].render
     }
 
-    fn edit_row(&self, t: usize) -> &RowContent {
-        &self.row_content_each[t]
-    }
 }
 
 // highlight the search result
-// syntax highlight function // not used in version2
+// syntax highlight function
+// done in highlighting trait
 
 enum HighLight {
     Normal,
@@ -897,13 +781,7 @@ enum HighLight {
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
     fn match_type(&self, page: &Page) -> HighLight;
-    // fn color_row(&self, render: &str, highlight: &[HighLight], temp:&mut String) {
-    //     render.chars().enumerate().for_each(|(i, c)| {
-    //         let _ = execute!(stdout(), SetForegroundColor(self.set_color(&highlight[i])));
-    //         temp.push(c);
-    //         let _ = queue!(stdout(),Print(temp),ResetColor);
-    //     });
-    // }
+  
 }
 
 /*

@@ -140,10 +140,7 @@ impl Screen {
         self.active_mut().active_cursor_location = Some(self.key_handler.ip.clone());
         self.key_handler.ip = InsertionPoint::new();
         self.push(Page::new(display_type));
-        // self.page_stack.first_mut().unwrap().save_active_cursor_location(self.key_handler);
-        // let temp = self.text_page().active_cursor_location.unwrap();
-        // let screen_size = terminal::size().map(|(x, y)| (x as usize, y as usize)).unwrap();
-        // self.key_handler = KeyHandler::new(screen_size);
+        
     }
 
     pub fn add_help_page(&mut self) {
@@ -192,7 +189,6 @@ impl Screen {
     pub fn draw_content(&mut self, i: usize) {
         let on_screen = self.page_stack.get_mut(i).unwrap();
         on_screen.row_contents = split_with_n(&on_screen.contents);
-        // let calculator: Vec<&str> = on_screen.contents.split("\n").collect();
         self.key_handler.num_of_rows = on_screen.row_contents.len();
         let mut width: Vec<usize> = Vec::new();
         let mut bytes: Vec<usize> = Vec::new();
@@ -239,15 +235,7 @@ impl Screen {
                         (s_temp.len() - st.len(), st.len())
                     }
                 };
-                // let len = cmp::min(
-                //     bytes[row_in_content].saturating_sub(self.key_handler.column_offset),
-                //     self.key_handler.screen_cols,
-                // );
-                // let start = if len == 0 {
-                //     0
-                // } else {
-                //     self.key_handler.column_offset
-                // };
+              
                 content.push_str(&offset_string);
                 if i < self.key_handler.screen_rows - 1 {
                     if start + len == bytes[row_in_content] {
@@ -273,13 +261,7 @@ impl Screen {
                         );
                     };
                 }
-                // use the position of search words to match display content and color it
-                // for a in indices.iter(){
-                //     queue!(stdout(),Print(content[1..2].red())).unwrap();
-
-                //     content[*a..*a + text.len()].red();
-
-                // }
+             
             }
         }
         self.key_handler.bytes_in_row = bytes;
@@ -337,8 +319,7 @@ impl Screen {
         let text: &str = &content.clone()[..];
         self.color_struct.set_find(temp01);
         self.color_struct.coloring(text);
-        // queue!(stdout(), Print(content)).unwrap();
-        // return;
+        
         if !on_screen.display_type.overwrites() {
             match stdout.queue(cursor::MoveTo(x as u16, (y + 3) as u16)) {
                 Ok(_) => {}
@@ -357,42 +338,7 @@ impl Screen {
         };
         return;
 
-        // let target_term = temp01.as_str();
-
-        // let mut stdout = stdout();
-        // let color = "";
-
-        // let content_copy = content.clone();
-        // // let target_term : &str = "test";
-        // // match stdout.execute(terminal::Clear(terminal::ClearType::All)) {
-        // //     Ok(_) => {},
-        // //     Err(_) => {},
-        // // };
-
-        // match stdout.queue(cursor::MoveTo(0,0)) {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // };
-        // stdout.queue(style::PrintStyledContent(on_screen.prompt.replace('\n', "\r\n").reset()));
-        // let mut spot = 0;
-        // // stdout.queue(cursor::MoveTo(0,0));
-        // let tempvect : Vec<_> = content_copy.match_indices(target_term).collect();
-        // for i in tempvect {
-        //     let temp = String::from(&content_copy[spot..i.0]);
-        //     match color {
-        //         "black" => {stdout.queue(style::PrintStyledContent(temp.black()))},
-        //         _ => {stdout.queue(style::PrintStyledContent(temp.reset()))},
-        //     };
-        //     spot = i.0+target_term.len();
-        //     let temp = String::from(&content_copy[i.0..spot]);
-        //     stdout.queue(style::PrintStyledContent(temp.on_red()));
-        // }
-        // println!("{}", &content_copy[spot..]);
-        // match stdout.flush() {
-        //     Ok(_) => {},
-        //     Err(_) => {},
-        // };
-        // // println!("{:?}", &on_screen.prompt);
+        
     }
 
     pub fn print_overlay(&mut self, i: usize, content: String) {
@@ -637,26 +583,7 @@ impl ColorWord {
             }
             None => {}
         }
-        // for w in &self.red {
-        //     if word == w {
-        //         return Color::Red;
-        //     }
-        // }
-        // for w in &self.yellow {
-        //     if word == w {
-        //         return Color::Yellow;
-        //     }
-        // }
-        // for w in &self.blue {
-        //     if word == w {
-        //         return Color::Blue;
-        //     }
-        // }
-        // for w in &self.green {
-        //     if word == w {
-        //         return Color::DarkGreen;
-        //     }
-        // }
+        
         // Colors all numbers the same
         let first = word.chars().next().unwrap();
         if first.is_numeric() {

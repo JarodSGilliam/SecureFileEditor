@@ -242,13 +242,6 @@ impl KeyHandler {
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), '\n');
-                // self.bytes_in_row
-                //     .insert(self.ip.y + 1, self.bytes_in_row[self.ip.y] - self.ip.x);
-                // io::stdout().flush();
-                //println!("Enter b_i_r len: {}", self.bytes_in_row.len());
-                //println!("Enter ip x: {}, ip y: {}", self.ip.x, self.ip.y);
-                //io::stdout().flush();
-                // self.bytes_in_row[self.ip.y] = self.ip.x + 1;
                 self.ip.x = 0;
                 self.ip.y += 1;
             }

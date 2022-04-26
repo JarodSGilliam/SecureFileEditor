@@ -65,19 +65,12 @@ impl Page {
             self.prompt += "\n";
         }
     }
-    // pub fn insert_content_here(&mut self, before_here : usize, new_string : String) {
-    //     self.contents = format!("{}{}{}",&self.contents[..before_here],new_string,&self.contents[before_here..]);
-    // }
 
     pub fn save_active_cursor_location(&mut self, ip: InsertionPoint) {
         self.active_cursor_location = Some(ip);
     }
 
-    /*
-    pub fn draw_info_bar(&mut self) {
-        self.contents.push_str(&style::Attribute::Reverse.to_string());
-    }
-    */
+    
 }
 
 // Potential additions to page
