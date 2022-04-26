@@ -23,7 +23,7 @@ pub struct KeyHandler {
 impl KeyHandler {
     //create new KeyHandler with insertion point at origin (top-left corner)
     pub fn new(window_size: (usize, usize)) -> KeyHandler {
-        let instance = KeyHandler {
+        KeyHandler {
             ip: InsertionPoint::new(),
             screen_cols: window_size.0,
             screen_rows: window_size.1 - 2,
@@ -32,9 +32,7 @@ impl KeyHandler {
             num_of_rows: 0,
             row_offset: 0,
             column_offset: 0,
-        };
-        //println!("x:{} y:{}", instance.ip.x, instance.ip.y);
-        return instance;
+        }
     }
 
     //check cursor position when scroll
@@ -134,13 +132,6 @@ impl KeyHandler {
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), c);
                 on_screen.row_contents = split_with_n(&on_screen.contents);
-                //println!("\ninsertion b_i_r len: {}", self.bytes_in_row.len());
-                //println!("\ninsertion ip x: {}, y: {}", self.ip.x, self.ip.y);
-                if self.ip.y == self.bytes_in_row.len() {
-                    self.bytes_in_row.push(c.to_string().len());
-                } else {
-                    self.bytes_in_row[self.ip.y] += c.to_string().len();
-                }
                 self.ip.x += 1;
                 let (_, mut w) = on_screen
                     .row_contents
@@ -159,18 +150,12 @@ impl KeyHandler {
             }
 
             KeyCode::Tab => {
-                //println!("tabbing");
                 on_screen
                     .contents
                     .insert_str(self.get_current_location_in_string(on_screen), "    ");
                 self.bytes_in_row[self.ip.y] += 4;
                 self.ip.x += 4;
             }
-            // KeyCode::Tab => {
-            //     on_screen.contents.insert(self.get_current_location_in_string(on_screen), '\t');
-            //     self.rows[self.ip.y]+=1;
-            //     self.ip.x += 1;
-            // },
             KeyCode::Backspace => {
                 if self.ip.x == 0 {
                     if self.ip.y == 0 {
@@ -179,13 +164,7 @@ impl KeyHandler {
                         on_screen
                             .contents
                             .remove(self.get_current_location_in_string(on_screen) - 1);
-                        on_screen.row_contents = split_with_n(&on_screen.contents);
                         self.ip.x = self.width_in_row[self.ip.y - 1];
-                        self.bytes_in_row[self.ip.y - 1] =
-                            on_screen.row_contents[self.ip.y - 1].len();
-                        self.width_in_row[self.ip.y - 1] =
-                            on_screen.row_contents[self.ip.y - 1].width();
-                        self.bytes_in_row.remove(self.ip.y);
                         self.ip.y -= 1;
                     }
                 } else {
@@ -194,10 +173,9 @@ impl KeyHandler {
                         .pop()
                         .unwrap()
                         .len_utf8();
-                    let deleted = on_screen
+                    on_screen
                         .contents
                         .remove(self.get_current_location_in_string(on_screen) - a);
-                    self.bytes_in_row[self.ip.y] -= deleted.len_utf8();
                     self.ip.x -= 1;
                     let (_, mut w) = on_screen
                         .row_contents
@@ -221,7 +199,6 @@ impl KeyHandler {
                     if self.ip.y == self.num_of_rows - 1 {
                         //do nothing since insertion point is at end of file (bottom-right)
                     } else {
-                        //println!("{}", self.get_current_location_in_string());
                         on_screen
                             .contents
                             .remove(self.get_current_location_in_string(on_screen));
@@ -238,7 +215,6 @@ impl KeyHandler {
             }
 
             KeyCode::Enter => {
-                //println!("start_Enter b_i_r len: {}", self.bytes_in_row.len());
                 on_screen
                     .contents
                     .insert(self.get_current_location_in_string(on_screen), '\n');
@@ -269,9 +245,7 @@ pub fn split_with_n(content: &String) -> Vec<String> {
     let mut result = Vec::new();
     let mut last = 0;
     for (index, _) in content.match_indices('\n') {
-        // if last != index {
         result.push(content[last..index + 1].to_string());
-        // }
         last = index + 1;
     }
     if last < content.len() {
