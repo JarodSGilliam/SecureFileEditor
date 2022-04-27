@@ -1,17 +1,11 @@
-use std::io::{stdout, BufRead};
 use std::path::Path;
-use std::{io, thread, time};
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::style::*;
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::Result as CResult;
-use crossterm::{event, execute, terminal};
+use crossterm::{event, terminal};
 
 use unicode_truncate::UnicodeTruncateStr;
 use unicode_width::UnicodeWidthStr;
-
-use syntect::parsing::SyntaxSet;
 
 pub mod file_io;
 pub mod insertion_point;
@@ -51,10 +45,7 @@ fn main() {
     }
 
     let mut save_as_warned = false;
-    let s_set = SyntaxSet::load_defaults_newlines();
-    let syntax = s_set
-        .find_syntax_by_extension(extension.as_str())
-        .unwrap_or_else(|| s_set.find_syntax_plain_text()); //load plaintext syntax if extension does not yield another valid syntax
+
     // Setup
     match crossterm::terminal::enable_raw_mode() {
         Ok(_a) => {}
@@ -402,7 +393,7 @@ fn main() {
                                 Mode::Find(_) => break,
                                 Mode::Replace(t) => t,
                                 Mode::SaveAs(_t) => break,
-                                Mode::Command(t) => break,
+                                Mode::Command(_t) => break,
                             }
                             .clone();
                             screen.text_page_mut().contents = screen
@@ -582,24 +573,6 @@ impl Drop for TidyUp {
         terminal::disable_raw_mode().expect("Unable to disable raw mode terminal");
         Screen::clear_screen().expect("Error");
     }
-}
-
-//this funciton is meant to test out the AlternateScreen feature
-//you can access this by pressing 'Esc' during execution
-//the idea here is to allow the user to enter their find/replace text here,
-// then move back to the main screen to 'find' it
-fn test_alt_screen() -> CResult<()> {
-    execute!(stdout(), EnterAlternateScreen)?; //move to alternate screen
-    terminal::enable_raw_mode()?; //enable raw mode in alternate screen
-    let stdin = io::stdin();
-    let mut handle = stdin.lock();
-    let mut buffer = String::new();
-
-    println!("Text to find: ");
-    handle.read_line(&mut buffer)?;
-    thread::sleep(time::Duration::from_millis(1500));
-
-    execute!(stdout(), LeaveAlternateScreen) //move back to main screen
 }
 
 /*

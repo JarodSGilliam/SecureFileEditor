@@ -3,7 +3,6 @@ use crate::page::*;
 use crossterm::event::KeyCode;
 use std::cmp;
 use unicode_truncate::UnicodeTruncateStr;
-use unicode_width::UnicodeWidthStr;
 
 /*
     Struct responsible for moving the user's (i)nsertion (p)oint while
