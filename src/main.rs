@@ -172,11 +172,16 @@ fn main() {
                     code: KeyCode::Char('d'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    let pathname: String = String::from(match &opened_file_path {
-                        Some(t) => t.as_str(),
-                        None => "",
-                    });
-                    screen.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+
+                    if (passed_arg.eq("") == false) && (!Path::new(passed_arg.as_str()).exists()) {
+
+                        let pathname: String = String::from(match &opened_file_path {
+                            Some(t) => t.as_str(),
+                            None => "",
+                        });
+                        screen.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+                    }
+                
                 }
 
                 KeyEvent {
@@ -293,7 +298,7 @@ fn main() {
                                         } else if string.to_lowercase().eq(&info.to_lowercase()) {
                                             //file info
                                             screen.pop();
-                                            trigger_file_info(&mut screen, &opened_file_path);
+                                            trigger_file_info(&mut screen, &opened_file_path, passed_arg.clone());
                                         } else if string.to_lowercase().eq("save") || string.to_lowercase().eq("save as") {
                                             screen.pop();
                                             trigger_saveas(&mut screen);
@@ -369,6 +374,10 @@ fn main() {
                                         }
                                         //continue;
                                     } //if search text not empty
+                                    else {
+                                        screen.pop();
+                                        screen.mode = Mode::Normal;
+                                    }
                                 }
                             } //match if search text is empty or not
                         } //match PageType::Find
@@ -548,13 +557,18 @@ fn trigger_find(scr: &mut Screen) {
  *  the same thing as the KeyCode::Char('d') code in main's match statement, just in
  *  function form so it can be easily called from the command line.
  */
-fn trigger_file_info(scr: &mut Screen, path: &Option<String>) {
-    let pathname: String = String::from(match path {
-        Some(t) => t.as_str(),
-        None => "",
-    });
+fn trigger_file_info(scr: &mut Screen, path: &Option<String>, arg: String) {
 
-    scr.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+    if (arg.eq("") == false) && (!Path::new(arg.as_str()).exists()) {
+        let pathname: String = String::from(match path {
+            Some(t) => t.as_str(),
+            None => "",
+        });
+
+        scr.add_info_page(String::from(FileIO::get_metadata(&pathname)));
+    } else {
+        scr.pop();
+    }
 }
 
 /*
