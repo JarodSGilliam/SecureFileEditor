@@ -277,30 +277,35 @@ fn main() {
                             screen.mode = Mode::Command(screen.active().contents.clone());
                             match screen.search_text() {
                                 Some(string) => {
-                                    let toggle = String::from("Toggle Highlight");
-                                    let find = String::from("Find");
-                                    let info = String::from("File Info");
-
-                                    if string.to_lowercase().eq(&toggle.to_lowercase()) {
-                                        //toggle
+                                    if string.eq("") == false {
+                                        let toggle = String::from("Toggle Highlight");
+                                        let find = String::from("Find");
+                                        let info = String::from("File Info");
+    
+                                        if string.to_lowercase().eq(&toggle.to_lowercase()) {
+                                            //toggle
+                                            screen.pop();
+                                            screen.color_struct.toggle_status();
+                                        } else if string.to_lowercase().eq(&find.to_lowercase()) {
+                                            //find
+                                            screen.pop();
+                                            trigger_find(&mut screen);
+                                        } else if string.to_lowercase().eq(&info.to_lowercase()) {
+                                            //file info
+                                            screen.pop();
+                                            trigger_file_info(&mut screen, &opened_file_path);
+                                        } else if string.to_lowercase().eq("save") || string.to_lowercase().eq("save as") {
+                                            screen.pop();
+                                            trigger_saveas(&mut screen);
+                                        } else if string.to_lowercase().eq("replace") {
+                                            screen.pop();
+                                            trigger_replace(&mut screen);
+                                        } else{
+                                            screen.pop();
+                                        }
+                                    } else {
                                         screen.pop();
-                                        screen.color_struct.toggle_status();
-                                    } else if string.to_lowercase().eq(&find.to_lowercase()) {
-                                        //find
-                                        screen.pop();
-                                        trigger_find(&mut screen);
-                                    } else if string.to_lowercase().eq(&info.to_lowercase()) {
-                                        //file info
-                                        screen.pop();
-                                        trigger_file_info(&mut screen, &opened_file_path);
-                                    } else if string.to_lowercase().eq("save") || string.to_lowercase().eq("save as") {
-                                        screen.pop();
-                                        trigger_saveas(&mut screen);
-                                    } else if string.to_lowercase().eq("replace") {
-                                        screen.pop();
-                                        trigger_replace(&mut screen);
-                                    } else{
-                                        screen.pop();
+                                        screen.mode = Mode::Normal;
                                     }
                                 }
 
