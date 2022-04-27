@@ -600,6 +600,8 @@ impl ColorWord {
     }
     // Prints the given text with the correct colors
     pub fn coloring(&mut self, text: &str) {
+        self.parenthesis = 0;
+        self.brackets = 0;
         let mut stdout = stdout();
         let line: Vec<&str> = text.split("\r\n").collect();
         let mut multi_line_comment: bool = false;

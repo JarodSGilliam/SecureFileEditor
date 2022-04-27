@@ -135,7 +135,6 @@ fn main() {
                         screen.active_mut().set_prompt(String::from("Save As:"));
                     }
 
-                    screen.modified = false;
                     screen.mode = Mode::Normal;
                 }
 
