@@ -7,4 +7,5 @@ Ctrl + right = Moves to next "find" result
 Ctrl + r = Replace
 Ctrl + w = Close file
 Ctrl + d = Detailed file information
+Ctrl + c = Command line
 [Esc] to leave this screen
