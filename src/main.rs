@@ -775,8 +775,6 @@ enum HighLight {
     Search,
 }
 
-
-
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
     fn match_type(&self, page: &Page) -> HighLight;
