@@ -173,7 +173,11 @@ fn main() {
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
 
-                    if (passed_arg.eq("") == false) && (!Path::new(passed_arg.as_str()).exists()) {
+                    if !Path::new(passed_arg.as_str()).exists() {
+
+                    }
+
+                    else if (passed_arg.eq("") == false) && (!Path::new(passed_arg.as_str()).exists()) {
 
                         let pathname: String = String::from(match &opened_file_path {
                             Some(t) => t.as_str(),
@@ -559,7 +563,11 @@ fn trigger_find(scr: &mut Screen) {
  */
 fn trigger_file_info(scr: &mut Screen, path: &Option<String>, arg: String) {
 
-    if (arg.eq("") == false) && (!Path::new(arg.as_str()).exists()) {
+    if !Path::new(arg.as_str()).exists() {
+
+    }
+
+    else if (arg.eq("") == false) && (!Path::new(arg.as_str()).exists()) {
         let pathname: String = String::from(match path {
             Some(t) => t.as_str(),
             None => "",
