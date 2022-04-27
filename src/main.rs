@@ -110,6 +110,7 @@ fn main() {
                     } else if !Path::new(pathname.as_str()).exists() {
                         //cmd-line arg refers to new file
                         screen.file_name = Some(passed_arg.clone());
+                        screen.modified = false;
                         screen.reset_prompt();
                         let file_text: &String = &screen.active().contents;
                         match FileIO::overwrite_to_file(&passed_arg, file_text) {
@@ -118,12 +119,13 @@ fn main() {
                         }
                     } else {
                         //else save as usual
-                        screen.active_mut().set_prompt(String::from("Saved!"));
+                        // screen.active_mut().set_prompt(String::from("Saved!"));
                         let new_text: &String = &screen.active().contents;
                         match FileIO::overwrite_to_file(&pathname, new_text) {
                             Ok(_) => {}
                             Err(e) => eprint!("Failed to save because of error {}", e),
                         };
+                        screen.modified = false;
                         if screen.find_mode() {
                             screen.active_mut().set_prompt(String::from(""));
                         }
@@ -142,6 +144,7 @@ fn main() {
                         screen.active_mut().set_prompt(String::from("Save As:"));
                     }
 
+                    screen.modified = false;
                     screen.mode = Mode::Normal;
                 }
 
@@ -201,7 +204,11 @@ fn main() {
                         | KeyCode::Home
                         | KeyCode::End),
                     modifiers: event::KeyModifiers::NONE,
-                } => screen.move_ip(direction),
+                } => {
+                    if screen.active().display_type != PageType::Info {
+                        screen.move_ip(direction);
+                    }
+                },
 
                 // Events that change the text
                 KeyEvent {
@@ -209,7 +216,12 @@ fn main() {
                         input
                         @ (KeyCode::Char(..) | KeyCode::Tab | KeyCode::Backspace | KeyCode::Delete),
                     modifiers: event::KeyModifiers::NONE | event::KeyModifiers::SHIFT,
-                } => screen.insertion(input),
+                } => {
+                    if screen.active().display_type != PageType::Info {
+                        screen.modified = true;
+                        screen.insertion(input);
+                    }
+                },
 
                 KeyEvent {
                     code: KeyCode::Enter,
@@ -238,6 +250,7 @@ fn main() {
                                                 Ok(_) => {
                                                     screen.file_name = Some(pathname.clone());
                                                     screen.reset_prompt();
+                                                    screen.modified = false;
                                                     screen.pop();
                                                     save_as_warned = false;
                                                     println!("{}", get_extension(pathname.clone()));
@@ -274,25 +287,28 @@ fn main() {
                             match screen.search_text() {
                                 Some(string) => {
                                     let toggle = String::from("Toggle Highlight");
-                                    let toggle_lower = String::from("toggle highlight");
                                     let find = String::from("Find");
-                                    let find_lower = String::from("find");
                                     let info = String::from("File Info");
-                                    let info_lower = String::from("file info");
 
-                                    if (string.eq(&toggle)) | (string.eq(&toggle_lower)) {
+                                    if string.to_lowercase().eq(&toggle.to_lowercase()) {
                                         //toggle
                                         screen.pop();
                                         screen.color_struct.toggle_status();
-                                    } else if (string.eq(&find)) | (string.eq(&find_lower)) {
+                                    } else if string.to_lowercase().eq(&find.to_lowercase()) {
                                         //find
                                         screen.pop();
                                         trigger_find(&mut screen);
-                                    } else if (string.eq(&info)) | (string.eq(&info_lower)) {
+                                    } else if string.to_lowercase().eq(&info.to_lowercase()) {
                                         //file info
                                         screen.pop();
                                         trigger_file_info(&mut screen, &opened_file_path);
-                                    } else {
+                                    } else if string.to_lowercase().eq("save") || string.to_lowercase().eq("save as") {
+                                        screen.pop();
+                                        trigger_saveas(&mut screen);
+                                    } else if string.to_lowercase().eq("replace") {
+                                        screen.pop();
+                                        trigger_replace(&mut screen);
+                                    } else{
                                         screen.pop();
                                     }
                                 }
@@ -425,18 +441,10 @@ fn main() {
                     code: KeyCode::Char('f'),
                     modifiers: event::KeyModifiers::CONTROL,
                 } => {
-                    // Jarod's Version
                     if screen.page_stack.len() == 1 {
                         // find_display
                         screen.add(PageType::Find);
-                        screen
-                            .active_mut()
-                            .set_prompt(String::from("Text to find:"));
-
-                        /*
-                            At this point we want to get the user's input for the text they'd like to find.
-                            Using io::stdin doesn't seem to work, so we may need to use something else here.
-                        */
+                        screen.active_mut().set_prompt(String::from("Text to find:"));
                     }
                     if screen.find_mode() {
                         screen.reset_prompt();
@@ -444,7 +452,7 @@ fn main() {
                     screen.mode = Mode::Normal;
                 }
 
-                // Triggers find screen
+                // Triggers replace screen
                 KeyEvent {
                     code: KeyCode::Char('r'),
                     modifiers: event::KeyModifiers::CONTROL,
@@ -503,7 +511,6 @@ fn main() {
  *  KeyCode::Char('f') code in main's match statement, just in function form
  *  so it can be easily called from the command line.
  */
-
 fn trigger_find(scr: &mut Screen) {
     if scr.page_stack.len() == 1 {
         scr.add(PageType::Find);
@@ -522,7 +529,6 @@ fn trigger_find(scr: &mut Screen) {
  *  the same thing as the KeyCode::Char('d') code in main's match statement, just in
  *  function form so it can be easily called from the command line.
  */
-
 fn trigger_file_info(scr: &mut Screen, path: &Option<String>) {
     let pathname: String = String::from(match path {
         Some(t) => t.as_str(),
@@ -544,7 +550,27 @@ fn trigger_saveas(scr: &mut Screen) {
         scr.active_mut().set_prompt(String::from("Save As"));
     }
 
+    scr.modified = false;
     scr.mode = Mode::Normal;
+}
+
+/*
+ *  This function is called when the user enters the Replace command
+ *  from the Command Line screen. It essentially does the same thing as the
+ *  KeyCode::Char('r') code in main's match statement, just in function form
+ *  so it can be easily called from the command line.
+ */
+fn trigger_replace(screen: &mut Screen) {
+    if screen.page_stack.len() == 1 {
+        screen.add(PageType::ReplaceP1);
+        screen
+            .active_mut()
+            .set_prompt(String::from("Replace P1:\nFind:"));
+    }
+    if screen.find_mode() {
+        screen.reset_prompt();
+    }
+    screen.mode = Mode::Normal;
 }
 
 /*

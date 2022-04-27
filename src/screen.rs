@@ -384,9 +384,23 @@ impl Screen {
                 self.key_handler.screen_cols / 2,
                 x,
                 y + 4,
+                "Replace".to_owned(),
+            );
+            Screen::create_line(
+                &mut stdout,
+                self.key_handler.screen_cols / 2,
+                x,
+                y + 5,
                 "File Info".to_owned(),
             );
-            Screen::print_at_times(&mut stdout, x, y + 5, "-", self.key_handler.screen_cols / 2);
+            Screen::create_line(
+                &mut stdout,
+                self.key_handler.screen_cols / 2,
+                x,
+                y + 6,
+                "Save As".to_owned(),
+            );
+            Screen::print_at_times(&mut stdout, x, y + 7, "-", self.key_handler.screen_cols / 2);
         }
     }
 
