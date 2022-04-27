@@ -25,6 +25,9 @@ static AUTOSAVE: bool = false;
 static AUTOSAVEEVERYNOPERATIONS: usize = 1000;
 
 fn main() {
+
+    let _hl_instance = (HighLight::Normal, HighLight::Number, HighLight::Search);
+
     // SETUP
     //introduce Tidy_Up instance so that raw mode is disabled at end of main
     let _tidy_up = TidyUp;
@@ -771,6 +774,8 @@ enum HighLight {
     Number,
     Search,
 }
+
+
 
 trait ColorContent {
     fn set_color(&self, highlight_type: &HighLight) -> Color;
