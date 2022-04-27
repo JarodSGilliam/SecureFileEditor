@@ -246,11 +246,9 @@ fn main() {
                                                     screen.modified = false;
                                                     screen.pop();
                                                     save_as_warned = false;
-                                                    println!("{}", get_extension(pathname.clone()));
                                                     screen.color_struct = Screen::get_color_struct(
                                                         get_extension(pathname.clone()),
                                                     );
-                                                    println!("{:?}", screen.color_struct.language);
                                                 }
                                                 Err(e) => eprint!(
                                                     "Failed to save as new file due to error {}",
@@ -374,16 +372,31 @@ fn main() {
                                 Some(t) => String::from(t.contents.as_str()),
                                 None => String::new(),
                             });
-                            screen.pop();
-                            screen.add(PageType::ReplaceP2);
-                            screen
-                                .active_mut()
-                                .set_prompt(String::from("Replace P2:\nReplace:"));
-                            println!("{}", screen.search_text().unwrap());
-                            if screen.find_mode() {
-                                screen.reset_prompt();
-                            }
-                            continue;
+
+                            match screen.search_text() {
+                                None => {
+                                    screen.pop();
+                                }
+                                Some(str) => {
+                                    if str.eq("") == false {
+
+                                        screen.pop();
+                                        screen.add(PageType::ReplaceP2);
+                                        screen
+                                            .active_mut()
+                                            .set_prompt(String::from("Replace P2:\nReplace:"));
+
+                                        if screen.find_mode() {
+                                            screen.reset_prompt();
+                                        }
+                                        continue;
+                                    } //if user's text not empty
+                                    else {
+                                        screen.pop();
+                                        screen.mode = Mode::Normal;
+                                    }
+                                } //string from search_text
+                            } //match
                         }
                         PageType::ReplaceP2 => {
                             let to_replace = match screen.page_stack.last() {
@@ -398,19 +411,27 @@ fn main() {
                                 Mode::Command(_t) => break,
                             }
                             .clone();
-                            screen.text_page_mut().contents = screen
-                                .text_page_mut()
-                                .contents
-                                .replace(temp007.as_str(), to_replace.as_str());
-                            screen.pop();
-                            screen
-                                .text_page_mut()
-                                .set_prompt(String::from("Replaced here:"));
-                            screen.mode = Mode::Replace(to_replace.clone());
-                            if screen.find_mode() {
-                                screen.reset_prompt();
+
+                            if to_replace.eq("") == false {
+
+                                screen.text_page_mut().contents = screen
+                                    .text_page_mut()
+                                    .contents
+                                    .replace(temp007.as_str(), to_replace.as_str());
+                                screen.pop();
+                                screen
+                                    .text_page_mut()
+                                    .set_prompt(String::from("Replaced here:"));
+                                screen.mode = Mode::Replace(to_replace.clone());
+                                if screen.find_mode() {
+                                    screen.reset_prompt();
+                                }
+                                continue;
+                            } //if Replace text is not empty, otherwise just close the Replace screen
+                            else {
+                                screen.pop();
+                                screen.mode = Mode::Normal;
                             }
-                            continue;
                         }
                         _ => {}
                     }
@@ -586,16 +607,12 @@ impl Drop for TidyUp {
 */
 
 fn find_text(disp: &Page, text: &String) -> (Option<usize>, Option<usize>) {
-    //println!("{}", disp.contents);
     match disp.contents.find(text) {
         Some(t) => {
-            //println!("{}", t);
             let (new_x, new_y) = get_newx_newy(&disp.contents, t);
-            //println!("{}, {}", new_x, new_y);
             return (Some(new_x), Some(new_y));
         }
         None => {
-            //println!("Not Found");
             return (None, None);
         }
     }
@@ -625,22 +642,22 @@ fn get_newx_newy(contents: &String, position: usize) -> (usize, usize) {
     'outer: for line in &v {
         if (line.len()) + total < position {
             //if position not on this line
-            //println!("len: {}", line.len());
+            
             total = total + line.len() + 1;
             y_val += 1;
-            //println!("total: {}", total);
+            
         } else if (line.len()) + total == position {
             //if position at end of this line
-            //println!("here");
+            
             total = total + line.len();
             x_val = line.len();
         } else if (line.len() + total) > position {
             //if position somewhere in this line
-            //println!("final len: {}", line.len());
+            
             let mut i = 0;
 
             for c in line.chars() {
-                //println!("iterating on {}", c);
+                
                 if (total + i) == position {
                     // let s=disp.row_contents.get(y_val).unwrap();
                     let t = line.unicode_truncate(line[..i].width());
@@ -668,19 +685,19 @@ fn get_indices(contents: &String, text: &String, count: usize) -> Vec<usize> {
     while res_vec.len() < count {
         match new_str.find(text) {
             Some(t) => {
-                //println!("new_str: {}", new_str);
+                
                 if res_vec.len() > 0 {
                     let temp = res_vec[res_vec.len() - 1];
                     res_vec.push(t + temp + c.len_utf8());
-                    //println!("pushing_ {}", t + temp + 1);
+                    
                 } else {
                     res_vec.push(t);
-                    //println!("pushing: {}", t);
+                    
                 }
                 //res_vec.push(t);
                 new_str = new_str.split_at(t).1.to_string();
                 c = new_str.remove(0);
-                //println!("new_str_: {}", new_str);
+                
             }
             None => {}
         }
@@ -707,7 +724,7 @@ fn get_xs_and_ys(list: Vec<usize>, contents: &String) -> Vec<(usize, usize)> {
     for entry in list {
         res_vec.push(get_newx_newy(contents, entry)); //get the x, y coordinates from an index
     }
-    //println!("coordinates: {:?}", res_vec);
+    
     res_vec
 }
 
