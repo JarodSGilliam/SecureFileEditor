@@ -2,7 +2,7 @@
 #### Created by Jarod Gillliam, Xin He, Hunter McGarity, and Chenqian Xu
 A good file editor makes a significant difference in terms of usability, portability, and productivity for many software developers. While large-scale editor projects, such as Microsoft Visual Studio Code, provide a plethora of additional features that some developers require, they can become bloated with an abundance of plugins and confusing project management. It is the goal of this team to develop a simple file/text editor focused on usability and convenience in the Rust language.
 
-# Docker Instructions (Release 2)
+# Docker Instructions
 For the second release, we are simply aiming for a bash shell on container startup. The user will need to manually cd into the 'src' directory from here and then
 run the program with "cargo run [filename]".
 
@@ -15,6 +15,9 @@ With Docker installed:
    The docker container should launch in the /home/src folder; if it doesn't, cd into the src folder
 5) "cargo run text.txt" [other file names if applicable]
 6) Press "Ctrl + h" for a list of keyboard commands
+
+# Usage Instructions
+Type "ctrl + h" to get a list of all keyboard shortcuts or press "ctrl + c" to type in commands instead.
 
 ## V1
 (Set to release 3/4/2022)
@@ -43,6 +46,12 @@ Crates used:
 ## V3
 (Set to release 4/26/2022)
 For the final release, the team will focus on ironing out issues with previous releases and implementing other advanced features which are quality of life improvements like syntax highlighting and keyboard shortcuts.
-* [ ] Keyboard Shortcuts
-* [ ] Command Line
-* [ ] Syntax Highlighting
+* [x] Keyboard Shortcuts
+* [x] Command Line
+* [x] Syntax Highlighting
+
+Crates Used:
+   - crossterm = "0.23.0"
+   - chrono = "0.4.0"
+   - unicode-width = "0.1.9"
+   - unicode-truncate = "0.2.0"
